@@ -1,0 +1,23 @@
+// src/components/ui/icons.tsx
+export const Icons = {
+  Plus: () => <span className="icon">➕</span>,
+  Minus: () => <span className="icon">➖</span>,
+  ShoppingCart: () => <span className="icon">🛒</span>,
+  Check: () => <span className="icon">✅</span>,
+  X: () => <span className="icon">❌</span>,
+  CreditCard: () => <span className="icon">💳</span>,
+  Smartphone: () => <span className="icon">📱</span>,
+  DollarSign: () => <span className="icon">💰</span>,
+  Star: () => <span className="icon">⭐</span>,
+  Utensils: () => <span className="icon">🍽️</span>,
+  Coffee: () => <span className="icon">☕</span>,
+  IceCream2: () => <span className="icon">🍦</span>,
+  Tag: () => <span className="icon">🏷️</span>,
+  ChevronRight: () => <span className="icon">▶️</span>,
+  User: () => <span className="icon">👤</span>,
+  FileText: () => <span className="icon">📄</span>,
+  Landmark: () => <span className="icon">🏛️</span>,
+  Home: () => <span className="icon">🏠</span>,
+  ShoppingBag: () => <span className="icon">🛍️</span>,
+  AlertCircle: () => <span className="icon">⚠️</span>,
+};

@@ -1,0 +1,123 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Restaurant {
+  id        Int      @id @default(autoincrement())
+  name      String
+  address   String?
+  logo      String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  categories  Category[]
+  products    Product[]
+  ingredients Ingredient[]
+  complements Complement[]
+  orders      Order[]
+
+  @@map("restaurants")
+}
+
+model Category {
+  id            Int     @id @default(autoincrement())
+  restaurantId  Int     @map("restaurant_id")
+  name          String
+  icon          String?
+  orderPosition Int     @default(0) @map("order_position")
+  active        Boolean @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+  products   Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id            Int      @id @default(autoincrement())
+  restaurantId  Int      @map("restaurant_id")
+  categoryId    Int      @map("category_id")
+  name          String
+  description   String?
+  price         Decimal  @db.Decimal(10, 2)
+  originalPrice Decimal? @map("original_price") @db.Decimal(10, 2)
+  image         String?
+  bestseller    Boolean  @default(false)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  restaurant Restaurant  @relation(fields: [restaurantId], references: [id])
+  category   Category    @relation(fields: [categoryId], references: [id])
+  orderItems OrderItem[]
+
+  @@map("products")
+}
+
+model Ingredient {
+  id           Int     @id @default(autoincrement())
+  restaurantId Int     @map("restaurant_id")
+  name         String
+  removable    Boolean @default(true)
+  active       Boolean @default(true)
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+
+  @@map("ingredients")
+}
+
+model Complement {
+  id           Int     @id @default(autoincrement())
+  restaurantId Int     @map("restaurant_id")
+  name         String
+  price        Decimal @db.Decimal(10, 2)
+  active       Boolean @default(true)
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+
+  @@map("complements")
+}
+
+model Order {
+  id            Int      @id @default(autoincrement())
+  restaurantId  Int      @map("restaurant_id")
+  orderNumber   String   @unique @map("order_number")
+  customerName  String?  @map("customer_name")
+  customerCpf   String?  @map("customer_cpf")
+  wantsReceipt  Boolean  @default(false) @map("wants_receipt")
+  orderType     String   @map("order_type")
+  paymentMethod String   @map("payment_method")
+  cardType      String?  @map("card_type")
+  totalAmount   Decimal  @map("total_amount") @db.Decimal(10, 2)
+  status        String   @default("pending")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+  items      OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id             Int     @id @default(autoincrement())
+  orderId        Int     @map("order_id")
+  productId      Int     @map("product_id")
+  quantity       Int
+  unitPrice      Decimal @map("unit_price") @db.Decimal(10, 2)
+  totalPrice     Decimal @map("total_price") @db.Decimal(10, 2)
+  customizations Json?
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
