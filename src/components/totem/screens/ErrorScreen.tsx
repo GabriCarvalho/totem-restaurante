@@ -1,22 +1,18 @@
-// src/components/totem/screens/ErrorScreen.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User } from "lucide-react";
+import { SystemError } from "../types";
 
 interface ErrorScreenProps {
-  errorType: "network" | "maintenance" | "general";
+  errorType: SystemError;
   onRetry: () => void;
   onAdmin: () => void;
 }
 
-export default function ErrorScreen({
-  errorType,
-  onRetry,
-  onAdmin,
-}: ErrorScreenProps) {
+export function ErrorScreen({ errorType, onRetry, onAdmin }: ErrorScreenProps) {
   const [countdown, setCountdown] = useState(30);
   const [autoRetry, setAutoRetry] = useState(true);
 

@@ -1,40 +1,18 @@
-// src/hooks/useDashboardData.ts
 import { useState, useEffect } from "react";
-import { Star, Utensils, Coffee, IceCream2, Tag } from "lucide-react";
-
-interface DashboardData {
-  restaurant: {
-    name: string;
-    address: string;
-    logo: string;
-  };
-  categories: Array<{
-    id: string;
-    name: string;
-    icon: any;
-  }>;
-  products: Array<any>;
-  complementItems: Array<any>;
-  removableIngredients: Array<any>;
-}
+import { DashboardData } from "../../../types";
+import { CATEGORIES } from "../utils/constants";
 
 export function useDashboardData() {
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     restaurant: {
-      name: "Carregando...",
+      name: "fcrazybossburgers",
       address: "Carregando...",
       logo: "🍔",
     },
-    categories: [
-      { id: "bestsellers", name: "Mais Vendidos", icon: Star },
-      { id: "burgers", name: "Lanches", icon: Utensils },
-      { id: "drinks", name: "Bebidas", icon: Coffee },
-      { id: "desserts", name: "Sobremesas", icon: IceCream2 },
-      { id: "promotions", name: "Promoções", icon: Tag },
-    ],
-    products: [],
+    categories: CATEGORIES,
     complementItems: [],
     removableIngredients: [],
+    products: [],
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -44,27 +22,26 @@ export function useDashboardData() {
     try {
       setIsLoading(true);
 
-      // Por enquanto, usar dados mock até conectar com o banco
-      const mockData = {
+      const mockApiResponse = {
         restaurant: {
           name: "fcrazybossburgers",
           address: "Vila Sanja",
           logo: "🍔",
         },
         complementItems: [
-          { id: 1, name: "Bacon Extra", price: 4.5 },
-          { id: 2, name: "Cheddar Cremoso", price: 3.0 },
-          { id: 3, name: "Queijo Suíço", price: 3.5 },
-          { id: 4, name: "Molho Especial", price: 1.0 },
-          { id: 5, name: "Alface Extra", price: 1.5 },
-          { id: 6, name: "Tomate Extra", price: 1.5 },
+          { id: 101, name: "Bacon Extra", price: 4.5 },
+          { id: 102, name: "Cheddar Cremoso", price: 3.0 },
+          { id: 103, name: "Queijo Suíço", price: 3.5 },
+          { id: 104, name: "Molho Especial", price: 1.0 },
+          { id: 105, name: "Alface Extra", price: 1.5 },
+          { id: 106, name: "Tomate Extra", price: 1.5 },
         ],
         removableIngredients: [
-          { id: 1, name: "Cebola" },
-          { id: 2, name: "Tomate" },
-          { id: 3, name: "Alface" },
-          { id: 4, name: "Molho" },
-          { id: 5, name: "Picles" },
+          { id: 201, name: "Cebola" },
+          { id: 202, name: "Tomate" },
+          { id: 203, name: "Alface" },
+          { id: 204, name: "Molho" },
+          { id: 205, name: "Picles" },
         ],
         products: [
           {
@@ -132,18 +109,12 @@ export function useDashboardData() {
         ],
       };
 
-      // Simular delay de rede
       await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setDashboardData((prev) => ({
-        ...prev,
-        ...mockData,
-      }));
-
+      setDashboardData((prev) => ({ ...prev, ...mockApiResponse }));
       setLastUpdate(new Date());
-      console.log("✅ Dados carregados às", new Date().toLocaleTimeString());
+      console.log("🔄 Dados sincronizados às", new Date().toLocaleTimeString());
     } catch (error) {
-      console.error("❌ Erro ao carregar dados:", error);
+      console.error("❌ Erro ao sincronizar:", error);
     } finally {
       setIsLoading(false);
     }
@@ -154,7 +125,9 @@ export function useDashboardData() {
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(fetchDashboardData, 30000);
+    const interval = setInterval(() => {
+      fetchDashboardData();
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 

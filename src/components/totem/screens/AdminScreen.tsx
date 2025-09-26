@@ -1,4 +1,3 @@
-// src/components/totem/screens/AdminScreen.tsx
 "use client";
 
 import { useState } from "react";
@@ -6,15 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { User, X } from "lucide-react";
+import { DashboardData } from "../types";
 
 interface AdminScreenProps {
   onBack: () => void;
-  dashboardData: any;
+  dashboardData: DashboardData;
   refreshData: () => void;
   lastUpdate: Date;
 }
 
-export default function AdminScreen({
+export function AdminScreen({
   onBack,
   dashboardData,
   refreshData,
@@ -255,17 +255,28 @@ export default function AdminScreen({
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span>Conexão com Dashboard:</span>
-                  <Badge variant="green">✅ Online</Badge>
+                  <Badge
+                    variant="secondary"
+                    className="bg-green-100 text-green-800"
+                  >
+                    ✅ Online
+                  </Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span>Produtos Carregados:</span>
-                  <Badge variant="blue">
+                  <Badge
+                    variant="secondary"
+                    className="bg-blue-100 text-blue-800"
+                  >
                     {dashboardData.products.length} itens
                   </Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span>Complementos:</span>
-                  <Badge variant="blue">
+                  <Badge
+                    variant="secondary"
+                    className="bg-blue-100 text-blue-800"
+                  >
                     {dashboardData.complementItems.length} itens
                   </Badge>
                 </div>
@@ -305,51 +316,6 @@ export default function AdminScreen({
             </CardContent>
           </Card>
         </div>
-
-        {/* Ações Rápidas */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Ações Rápidas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button
-                variant="outline"
-                className="h-16"
-                onClick={() => alert("Funcionalidade em desenvolvimento")}
-              >
-                🔄 Reiniciar Sistema
-              </Button>
-
-              <Button
-                variant="outline"
-                className="h-16"
-                onClick={() => alert("Funcionalidade em desenvolvimento")}
-              >
-                📊 Exportar Relatório
-              </Button>
-
-              <Button
-                variant="outline"
-                className="h-16"
-                onClick={() => alert("Funcionalidade em desenvolvimento")}
-              >
-                🛠️ Modo Manutenção
-              </Button>
-
-              <Button
-                variant="outline"
-                className="h-16"
-                onClick={() => {
-                  setIsAuthenticated(false);
-                  setAdminPassword("");
-                }}
-              >
-                🚪 Fazer Logout
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

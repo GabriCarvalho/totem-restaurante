@@ -1,4 +1,3 @@
-// src/components/totem/screens/LoadingScreen.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,7 +9,7 @@ interface LoadingScreenProps {
   showProgress?: boolean;
 }
 
-export default function LoadingScreen({
+export function LoadingScreen({
   message = "Carregando sistema...",
   progress = 0,
   showProgress = false,
