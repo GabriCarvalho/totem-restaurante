@@ -1,4 +1,3 @@
-// src/components/totem/TotemMain.tsx
 "use client";
 
 import { useEffect } from "react";
@@ -24,9 +23,16 @@ export default function TotemMain() {
   useEffect(() => {
     const timer = setTimeout(() => {
       totemState.setIsInitialLoading(false);
-    }, 3000);
+    }, 2000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [totemState]);
+
+  // ✅ Inicializar categoria quando os dados carregarem
+  useEffect(() => {
+    if (!dashboardData.isLoading && dashboardData.categories.length > 0) {
+      totemState.initializeWithFirstCategory(dashboardData.categories);
+    }
+  }, [dashboardData.isLoading, dashboardData.categories, totemState]);
 
   // Verificações de tela em ordem de prioridade
   if (totemState.isInitialLoading) {
@@ -35,6 +41,30 @@ export default function TotemMain() {
         message="Iniciando sistema..."
         showProgress={true}
         progress={75}
+      />
+    );
+  }
+
+  // Mostrar loading enquanto carrega dados do Supabase
+  if (dashboardData.isLoading) {
+    return (
+      <LoadingScreen
+        message="Carregando dados do restaurante..."
+        showProgress={true}
+        progress={50}
+      />
+    );
+  }
+
+  // Verificar se houve erro no carregamento
+  if (dashboardData.restaurant.name === "Erro ao carregar") {
+    return (
+      <ErrorScreen
+        errorType="connection"
+        onRetry={() => {
+          dashboardData.refreshData();
+        }}
+        onAdmin={() => totemState.setShowAdmin(true)}
       />
     );
   }

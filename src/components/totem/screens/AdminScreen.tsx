@@ -1,11 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { User, X } from "lucide-react";
 import { DashboardData } from "../types";
+
+// Importação condicional para evitar erros se o serviço não existir
+let orderService: any;
+try {
+  orderService = require("@/lib/services/orderService").orderService;
+} catch (error) {
+  console.warn("OrderService não encontrado, usando dados mock");
+  orderService = null;
+}
 
 interface AdminScreenProps {
   onBack: () => void;
@@ -20,152 +29,158 @@ export function AdminScreen({
   refreshData,
   lastUpdate,
 }: AdminScreenProps) {
-  const [adminPassword, setAdminPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showStats, setShowStats] = useState(false);
+  const [password, setPassword] = useState("");
+  const [stats, setStats] = useState({
+    todayOrders: 0,
+    todayRevenue: 0,
+    dineInOrders: 0,
+    takeawayOrders: 0,
+  });
 
-  const correctPassword = "1234";
+  useEffect(() => {
+    if (isAuthenticated && orderService) {
+      loadStats();
+    }
+  }, [isAuthenticated]);
 
-  const handlePasswordKeyPress = (digit: string) => {
-    if (adminPassword.length < 10) {
-      setAdminPassword((prev) => prev + digit);
+  const loadStats = async () => {
+    if (!orderService) {
+      // Usar dados mock se o serviço não estiver disponível
+      setStats({
+        todayOrders: 12,
+        todayRevenue: 245.8,
+        dineInOrders: 8,
+        takeawayOrders: 4,
+      });
+      return;
+    }
+
+    try {
+      const data = await orderService.getTodayStats();
+      setStats(data);
+    } catch (error) {
+      console.error("Erro ao carregar estatísticas:", error);
+      // Fallback para dados mock
+      setStats({
+        todayOrders: 0,
+        todayRevenue: 0,
+        dineInOrders: 0,
+        takeawayOrders: 0,
+      });
     }
   };
 
-  const handlePasswordBackspace = () => {
-    setAdminPassword((prev) => prev.slice(0, -1));
-  };
-
-  const handlePasswordClear = () => {
-    setAdminPassword("");
-  };
-
-  const handlePasswordConfirm = () => {
-    if (adminPassword === correctPassword) {
+  const handleLogin = () => {
+    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "1234";
+    if (password === adminPassword) {
       setIsAuthenticated(true);
+      setPassword("");
     } else {
       alert("Senha incorreta!");
-      setAdminPassword("");
+      setPassword("");
     }
   };
 
-  const mockStats = {
-    todayOrders: 47,
-    todayRevenue: 1250.8,
-    popularProduct: "X-Burger Clássico",
-    averageTicket: 26.6,
-    dineInOrders: 28,
-    takeawayOrders: 19,
-    paymentMethods: {
-      card: 32,
-      pix: 12,
-      cash: 3,
-    },
+  const handleKeyPress = (key: string) => {
+    if (key === "Enter") {
+      handleLogin();
+    } else if (key === "Backspace") {
+      setPassword(password.slice(0, -1));
+    } else if (key === "Clear") {
+      setPassword("");
+    } else if (password.length < 10) {
+      setPassword(password + key);
+    }
   };
 
-  // Tela de autenticação
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-md mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold text-gray-800">
-              Área Administrativa
-            </h1>
-            <Button variant="outline" onClick={onBack}>
-              <X className="h-4 w-4 mr-2" />
-              Voltar
-            </Button>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center flex items-center justify-center">
-                <User className="h-6 w-6 mr-2" />
-                Acesso Restrito
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center mb-6">
-                <p className="text-gray-600 mb-4">
-                  Digite a senha de administrador:
-                </p>
-
-                <div className="text-2xl font-mono bg-gray-100 p-4 rounded-lg border-2 mb-4">
-                  {"*".repeat(adminPassword.length)}
-                  {"_".repeat(4 - adminPassword.length)}
-                </div>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-6">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+              <User className="h-8 w-8 text-blue-600" />
+            </div>
+            <CardTitle className="text-2xl">Acesso Administrativo</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="text-center">
+              <div className="text-2xl font-mono bg-gray-100 p-4 rounded-lg border-2 min-h-[60px] flex items-center justify-center">
+                {password ? (
+                  "•".repeat(password.length)
+                ) : (
+                  <span className="text-gray-400 italic">
+                    Digite a senha...
+                  </span>
+                )}
               </div>
+            </div>
 
-              {/* Teclado Numérico */}
-              <div className="bg-gray-100 p-4 rounded-lg">
-                <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, "", 0, ""].map((num, index) =>
-                    num !== "" ? (
-                      <Button
-                        key={`admin-${index}`}
-                        variant="outline"
-                        className="h-16 text-xl font-mono"
-                        onClick={() => handlePasswordKeyPress(num.toString())}
-                      >
-                        {num}
-                      </Button>
-                    ) : (
-                      <div key={`empty-${index}`} className="h-16" />
-                    )
-                  )}
-                </div>
-
-                <div className="flex gap-2 max-w-xs mx-auto mt-4">
-                  <Button
-                    variant="outline"
-                    className="flex-1 h-16"
-                    onClick={handlePasswordBackspace}
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Apagar
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1 h-16"
-                    onClick={handlePasswordClear}
-                  >
-                    Limpar
-                  </Button>
-                </div>
-
+            {/* Teclado numérico */}
+            <div className="grid grid-cols-3 gap-2">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                 <Button
-                  className="w-full h-16 bg-green-600 text-xl mt-2 max-w-xs mx-auto block"
-                  onClick={handlePasswordConfirm}
-                  disabled={adminPassword.length === 0}
+                  key={num}
+                  variant="outline"
+                  className="h-12 text-lg"
+                  onClick={() => handleKeyPress(num.toString())}
                 >
-                  Entrar
+                  {num}
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              ))}
+              <Button
+                variant="outline"
+                className="h-12"
+                onClick={() => handleKeyPress("Clear")}
+              >
+                Limpar
+              </Button>
+              <Button
+                variant="outline"
+                className="h-12 text-lg"
+                onClick={() => handleKeyPress("0")}
+              >
+                0
+              </Button>
+              <Button
+                variant="outline"
+                className="h-12"
+                onClick={() => handleKeyPress("Backspace")}
+              >
+                ⌫
+              </Button>
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={onBack}>
+                Voltar
+              </Button>
+              <Button
+                className="flex-1 bg-blue-600"
+                onClick={handleLogin}
+                disabled={password.length === 0}
+              >
+                Entrar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  // Tela administrativa autenticada
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-800">
-              Painel Administrativo
-            </h1>
-            <p className="text-gray-600">
+          <h1 className="text-4xl font-bold text-gray-800">
+            Painel Administrativo
+          </h1>
+          <div className="flex items-center gap-4">
+            <Badge variant="secondary" className="text-sm">
               Última atualização: {lastUpdate.toLocaleTimeString()}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={refreshData}>
-              🔄 Atualizar Dados
-            </Button>
+            </Badge>
             <Button variant="outline" onClick={onBack}>
               <X className="h-4 w-4 mr-2" />
               Sair
@@ -173,149 +188,174 @@ export function AdminScreen({
           </div>
         </div>
 
-        {/* Menu de opções */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Button
-            variant={showStats ? "default" : "outline"}
-            className="h-20 text-lg"
-            onClick={() => setShowStats(!showStats)}
-          >
-            📊 Estatísticas do Dia
-          </Button>
-
-          <Button
-            variant="outline"
-            className="h-20 text-lg"
-            onClick={() => alert("Funcionalidade em desenvolvimento")}
-          >
-            🛠️ Configurações
-          </Button>
-
-          <Button
-            variant="outline"
-            className="h-20 text-lg"
-            onClick={() => alert("Funcionalidade em desenvolvimento")}
-          >
-            📋 Relatórios
-          </Button>
-        </div>
-
-        {/* Estatísticas */}
-        {showStats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardContent className="p-6 text-center">
-                <div className="text-3xl mb-2">📦</div>
-                <div className="text-2xl font-bold text-green-600">
-                  {mockStats.todayOrders}
+        {/* Informações do Restaurante */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Informações do Restaurante</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="text-4xl mb-2">
+                  {dashboardData.restaurant.logo}
                 </div>
-                <div className="text-sm text-gray-600">Pedidos Hoje</div>
-              </CardContent>
-            </Card>
+                <h3 className="font-bold text-lg">
+                  {dashboardData.restaurant.name}
+                </h3>
+                <p className="text-gray-600">
+                  {dashboardData.restaurant.address}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Categorias Ativas</h4>
+                <p className="text-2xl font-bold text-blue-600">
+                  {dashboardData.categories.length}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Produtos Ativos</h4>
+                <p className="text-2xl font-bold text-green-600">
+                  {dashboardData.products.length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-            <Card>
-              <CardContent className="p-6 text-center">
-                <div className="text-3xl mb-2">💰</div>
-                <div className="text-2xl font-bold text-green-600">
-                  R\$ {mockStats.todayRevenue.toFixed(2)}
-                </div>
-                <div className="text-sm text-gray-600">Faturamento</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6 text-center">
-                <div className="text-3xl mb-2">⭐</div>
-                <div className="text-lg font-bold text-gray-800">
-                  {mockStats.popularProduct}
-                </div>
-                <div className="text-sm text-gray-600">Mais Vendido</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6 text-center">
-                <div className="text-3xl mb-2">🎯</div>
-                <div className="text-2xl font-bold text-blue-600">
-                  R\$ {mockStats.averageTicket.toFixed(2)}
-                </div>
-                <div className="text-sm text-gray-600">Ticket Médio</div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Informações do Sistema */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Estatísticas do Dia */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Status do Sistema</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span>Conexão com Dashboard:</span>
-                  <Badge
-                    variant="secondary"
-                    className="bg-green-100 text-green-800"
-                  >
-                    ✅ Online
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Produtos Carregados:</span>
-                  <Badge
-                    variant="secondary"
-                    className="bg-blue-100 text-blue-800"
-                  >
-                    {dashboardData.products.length} itens
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Complementos:</span>
-                  <Badge
-                    variant="secondary"
-                    className="bg-blue-100 text-blue-800"
-                  >
-                    {dashboardData.complementItems.length} itens
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Última Sincronização:</span>
-                  <span className="text-sm text-gray-600">
-                    {lastUpdate.toLocaleString()}
-                  </span>
-                </div>
+            <CardContent className="p-6">
+              <div className="text-center">
+                <h3 className="text-sm font-medium text-gray-600">
+                  Pedidos Hoje
+                </h3>
+                <p className="text-3xl font-bold text-blue-600">
+                  {stats.todayOrders}
+                </p>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Informações do Restaurante</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <strong>Nome:</strong> {dashboardData.restaurant.name}
-                </div>
-                <div>
-                  <strong>Endereço:</strong> {dashboardData.restaurant.address}
-                </div>
-                <div>
-                  <strong>Categorias Ativas:</strong>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {dashboardData.categories.map((cat: any) => (
-                      <Badge key={cat.id} variant="secondary">
-                        {cat.name}
+            <CardContent className="p-6">
+              <div className="text-center">
+                <h3 className="text-sm font-medium text-gray-600">
+                  Faturamento Hoje
+                </h3>
+                <p className="text-3xl font-bold text-green-600">
+                  R$ {stats.todayRevenue.toFixed(2)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="text-center">
+                <h3 className="text-sm font-medium text-gray-600">
+                  Comer no Local
+                </h3>
+                <p className="text-3xl font-bold text-orange-600">
+                  {stats.dineInOrders}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="text-center">
+                <h3 className="text-sm font-medium text-gray-600">
+                  Para Viagem
+                </h3>
+                <p className="text-3xl font-bold text-purple-600">
+                  {stats.takeawayOrders}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Produtos por Categoria */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Produtos por Categoria</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {dashboardData.categories.map((category) => {
+                const categoryProducts = dashboardData.products.filter(
+                  (product) => product.category === category.name
+                );
+                return (
+                  <div key={category.id} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-lg">{category.name}</h4>
+                      <Badge variant="secondary">
+                        {categoryProducts.length} produtos
                       </Badge>
-                    ))}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {categoryProducts.map((product) => (
+                        <div
+                          key={product.id}
+                          className="flex items-center p-3 bg-gray-50 rounded-lg"
+                        >
+                          <span className="text-2xl mr-3">{product.image}</span>
+                          <div className="flex-1">
+                            <h5 className="font-medium">{product.name}</h5>
+                            <p className="text-sm text-gray-600">
+                              R$ {product.price.toFixed(2)}
+                            </p>
+                          </div>
+                          {product.bestseller && (
+                            <Badge className="bg-yellow-500 text-black">
+                              Top
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Ações Administrativas */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Ações do Sistema</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4 flex-wrap">
+              <Button onClick={refreshData} disabled={dashboardData.isLoading}>
+                {dashboardData.isLoading ? "Atualizando..." : "Atualizar Dados"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (orderService) {
+                    loadStats();
+                  }
+                }}
+              >
+                Recarregar Estatísticas
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsAuthenticated(false);
+                  setPassword("");
+                }}
+              >
+                Fazer Logout
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

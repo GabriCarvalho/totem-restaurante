@@ -1,4 +1,3 @@
-// src/components/totem/screens/MainScreen.tsx
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,11 @@ import {
   ShoppingCart,
   ChevronRight,
   Star,
+  Package,
+  Utensils,
+  Coffee,
+  IceCream2,
+  Tag,
 } from "lucide-react";
 import { DashboardData, Product } from "../types";
 import { useTotemState } from "../hooks/useTotemState";
@@ -20,12 +24,31 @@ interface MainScreenProps {
 }
 
 export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
-  const getProductsByCategory = (category: string): Product[] => {
-    if (category === "bestsellers") {
-      return dashboardData.products.filter((product) => product.bestseller);
+  const getProductsByCategory = (categoryId: string): Product[] => {
+    // Encontrar a categoria selecionada
+    const selectedCategory = dashboardData.categories.find(
+      (cat) => cat.id === categoryId
+    );
+
+    // Se for a categoria "Mais Vendidos" (verificar pelo nome)
+    if (selectedCategory?.name === "Mais Vendidos") {
+      // Retornar TODOS os produtos que são bestsellers
+      const bestsellers = dashboardData.products.filter(
+        (product) => product.bestseller === true
+      );
+      console.log("⭐ Produtos mais vendidos encontrados:", bestsellers.length);
+      console.log(
+        "⭐ Lista:",
+        bestsellers.map((p) => p.name)
+      );
+      return bestsellers;
     }
+
+    // Para outras categorias, filtrar por category_id ou category
     return dashboardData.products.filter(
-      (product) => product.category === category
+      (product) =>
+        product.category_id === categoryId ||
+        product.category === selectedCategory?.name
     );
   };
 
@@ -35,6 +58,37 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
     totemState.setRemovedIngredients([]);
     totemState.setCustomizationStep("complements");
     totemState.setCurrentScreen("customize");
+  };
+
+  // Função para obter o ícone correto da categoria
+  const getCategoryIcon = (category: any) => {
+    if (category.icon) {
+      return category.icon;
+    }
+
+    const iconMap: { [key: string]: any } = {
+      Star: Star,
+      Utensils: Utensils,
+      Coffee: Coffee,
+      IceCream2: IceCream2,
+      Tag: Tag,
+      Package: Package,
+    };
+
+    return iconMap[category.icon_name] || Package;
+  };
+
+  // Função para contar produtos por categoria
+  const getProductCount = (category: any) => {
+    // Se for "Mais Vendidos", contar produtos com bestseller = true
+    if (category.name === "Mais Vendidos") {
+      return dashboardData.products.filter((p) => p.bestseller === true).length;
+    }
+
+    // Para outras categorias
+    return dashboardData.products.filter(
+      (p) => p.category_id === category.id || p.category === category.name
+    ).length;
   };
 
   const products = getProductsByCategory(totemState.selectedCategory);
@@ -80,7 +134,9 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
 
         <div className="space-y-2">
           {dashboardData.categories.map((category) => {
-            const IconComponent = category.icon;
+            const IconComponent = getCategoryIcon(category);
+            const productCount = getProductCount(category);
+
             return (
               <Button
                 key={category.id}
@@ -94,6 +150,11 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
               >
                 <IconComponent className="h-6 w-6 mr-3" />
                 {category.name}
+                {productCount > 0 && (
+                  <Badge variant="secondary" className="ml-auto mr-2">
+                    {productCount}
+                  </Badge>
+                )}
                 <ChevronRight className="h-5 w-5 ml-auto" />
               </Button>
             );
@@ -133,11 +194,9 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
       <div className="flex-1 p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-4xl font-bold text-gray-800">
-            {
-              dashboardData.categories.find(
-                (c) => c.id === totemState.selectedCategory
-              )?.name
-            }
+            {dashboardData.categories.find(
+              (c) => c.id === totemState.selectedCategory
+            )?.name || "Produtos"}
           </h1>
 
           {/* Indicador do tipo de pedido no header */}
@@ -173,11 +232,11 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
                   <div className="flex items-center justify-center gap-2 mb-4">
                     {product.originalPrice && (
                       <span className="text-lg text-gray-500 line-through">
-                        R\$ {product.originalPrice.toFixed(2)}
+                        R$ {product.originalPrice.toFixed(2)}
                       </span>
                     )}
                     <span className="text-3xl font-bold text-green-600">
-                      R\$ {product.price.toFixed(2)}
+                      R$ {product.price.toFixed(2)}
                     </span>
                   </div>
 

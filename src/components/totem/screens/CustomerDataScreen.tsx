@@ -1,6 +1,6 @@
-// src/components/totem/screens/CustomerDataScreen.tsx
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,8 +24,58 @@ import {
 import { DashboardData } from "../types";
 import { useTotemState } from "../hooks/useTotemState";
 import { VirtualKeyboard, NumericKeyboard } from "../../keyboards";
-import { CPFDisplay } from "../../displays/CPFDisplay";
-import { CPFUtils } from "../utils/cpf";
+import { CPFDisplay } from "../../displays";
+
+// Importação condicional do orderService
+let orderService: any;
+try {
+  orderService = require("@/lib/services/orderService").orderService;
+} catch (error) {
+  console.warn("OrderService não encontrado, usando processamento local");
+  orderService = null;
+}
+
+// CPFUtils diretamente no arquivo
+const CPFUtils = {
+  clean: (cpf: string): string => cpf.replace(/\D/g, ""),
+
+  format: (cpf: string): string => {
+    const cleaned = CPFUtils.clean(cpf);
+    if (cleaned.length <= 3) return cleaned;
+    if (cleaned.length <= 6) return cleaned.replace(/(\d{3})(\d+)/, "$1.$2");
+    if (cleaned.length <= 9)
+      return cleaned.replace(/(\d{3})(\d{3})(\d+)/, "$1.$2.$3");
+    return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d+)/, "$1.$2.$3-$4");
+  },
+
+  validate: (cpf: string): boolean => {
+    const cleaned = CPFUtils.clean(cpf);
+    if (cleaned.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(cleaned)) return false;
+
+    let sum = 0;
+    let remainder;
+
+    for (let i = 1; i <= 9; i++) {
+      sum += parseInt(cleaned.substring(i - 1, i)) * (11 - i);
+    }
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cleaned.substring(9, 10))) return false;
+
+    sum = 0;
+    for (let i = 1; i <= 10; i++) {
+      sum += parseInt(cleaned.substring(i - 1, i)) * (12 - i);
+    }
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cleaned.substring(10, 11))) return false;
+
+    return true;
+  },
+
+  isComplete: (cpf: string): boolean => CPFUtils.clean(cpf).length === 11,
+};
 
 interface CustomerDataScreenProps {
   dashboardData: DashboardData;
@@ -36,6 +86,8 @@ export function CustomerDataScreen({
   dashboardData,
   totemState,
 }: CustomerDataScreenProps) {
+  const [isLoading, setIsLoading] = useState(false);
+
   // Funções para manipulação do nome
   const handleNameKeyPress = (char: string) => {
     if (totemState.customerData.name.length < 50) {
@@ -129,52 +181,83 @@ export function CustomerDataScreen({
   };
 
   // Funções de pagamento
-  const handleCardTypeSelect = (type: "credit" | "debit") => {
-    totemState.setCardType(type);
-    totemState.setPaymentMethod(`card_${type}` as any);
+  const handlePaymentSelect = (
+    method: "card_credit" | "card_debit" | "pix" | "cash"
+  ) => {
+    totemState.setPaymentMethod(method);
+    if (method === "card_credit") {
+      totemState.setCardType("credit");
+    } else if (method === "card_debit") {
+      totemState.setCardType("debit");
+    } else {
+      totemState.setCardType(null);
+    }
   };
 
-  const processPayment = () => {
-    const orderData = {
-      items: totemState.cart,
-      total: totemState.calculateCartTotal(),
-      paymentMethod: totemState.paymentMethod,
-      cardType: totemState.cardType,
-      orderType: totemState.orderType,
-      customerData: totemState.customerData,
-      timestamp: new Date().toISOString(),
-    };
+  const processPayment = async () => {
+    try {
+      setIsLoading(true);
 
-    let paymentDescription = "";
-    if (totemState.paymentMethod === "card_credit")
-      paymentDescription = "Cartão de Crédito";
-    else if (totemState.paymentMethod === "card_debit")
-      paymentDescription = "Cartão de Débito";
-    else
-      paymentDescription =
-        totemState.paymentMethod === "pix" ? "PIX" : "Dinheiro";
+      let orderId = null;
 
-    const orderTypeDescription =
-      totemState.orderType === "dine-in"
-        ? "Comer no Local"
-        : "Levar para Viagem";
+      // Tentar usar o orderService se disponível
+      if (orderService) {
+        const orderData = {
+          orderType: totemState.orderType!,
+          customerData: totemState.customerData,
+          paymentMethod: totemState.paymentMethod!,
+          cardType: totemState.cardType,
+          cart: totemState.cart,
+          totalAmount: totemState.calculateCartTotal(),
+        };
 
-    alert(
-      `Pedido finalizado!\n\n` +
-        `Tipo: ${orderTypeDescription}\n` +
-        `Cliente: ${totemState.customerData.name || "Não informado"}\n` +
-        `CPF na nota: ${
-          totemState.customerData.wantsReceipt
-            ? totemState.customerData.cpf || "Não informado"
-            : "Não solicitado"
-        }\n` +
-        `Total: R$ ${totemState.calculateCartTotal().toFixed(2)}\n` +
-        `Pagamento: ${paymentDescription}\n\n` +
-        `Obrigado pela preferência!`
-    );
+        orderId = await orderService.createOrder(orderData);
+      }
 
-    // Reset do sistema
-    totemState.resetOrder();
+      // Preparar descrições
+      let paymentDescription = "";
+      if (totemState.paymentMethod === "card_credit")
+        paymentDescription = "Cartão de Crédito";
+      else if (totemState.paymentMethod === "card_debit")
+        paymentDescription = "Cartão de Débito";
+      else
+        paymentDescription =
+          totemState.paymentMethod === "pix" ? "PIX" : "Dinheiro";
+
+      const orderTypeDescription =
+        totemState.orderType === "dine-in"
+          ? "Comer no Local"
+          : "Levar para Viagem";
+
+      // Mostrar confirmação
+      const orderNumber = orderId
+        ? orderId.substring(0, 8).toUpperCase()
+        : `LOCAL-${Date.now().toString().slice(-6)}`;
+
+      alert(
+        `✅ Pedido realizado com sucesso!\n\n` +
+          `Número do pedido: ${orderNumber}\n` +
+          `Tipo: ${orderTypeDescription}\n` +
+          `Cliente: ${totemState.customerData.name || "Não informado"}\n` +
+          `CPF na nota: ${
+            totemState.customerData.wantsReceipt
+              ? totemState.customerData.cpf || "Não informado"
+              : "Não solicitado"
+          }\n` +
+          `Total: R$ ${totemState.calculateCartTotal().toFixed(2)}\n` +
+          `Pagamento: ${paymentDescription}\n\n` +
+          `Obrigado pela preferência!\n` +
+          `Aguarde a preparação do seu pedido.`
+      );
+
+      // Reset do sistema
+      totemState.resetOrder();
+    } catch (error) {
+      console.error("Erro ao processar pagamento:", error);
+      alert("❌ Erro ao processar pedido. Tente novamente.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -310,7 +393,7 @@ export function CustomerDataScreen({
                 onBackspace={handleCpfBackspace}
                 onClear={handleCpfClear}
                 onConfirm={handleCpfConfirm}
-                disabled={dashboardData.isLoading}
+                disabled={isLoading}
                 confirmDisabled={
                   !CPFUtils.isComplete(totemState.customerData.cpf) ||
                   !CPFUtils.validate(totemState.customerData.cpf)
@@ -363,7 +446,7 @@ export function CustomerDataScreen({
                 onSpace={handleNameSpace}
                 onClear={handleNameClear}
                 onConfirm={handleNameConfirm}
-                disabled={dashboardData.isLoading}
+                disabled={isLoading}
               />
             </CardContent>
           </Card>
@@ -407,115 +490,105 @@ export function CustomerDataScreen({
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {/* Opção Cartão (com sub-opções) */}
+                  {/* Cartão de Crédito */}
                   <div
                     className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                      totemState.paymentMethod?.startsWith("card_")
+                      totemState.paymentMethod === "card_credit"
                         ? "border-green-500 bg-green-50"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
-                    onClick={() => totemState.setPaymentMethod("card" as any)}
+                    onClick={() => handlePaymentSelect("card_credit")}
                   >
                     <div
                       className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center ${
-                        totemState.paymentMethod?.startsWith("card_")
+                        totemState.paymentMethod === "card_credit"
                           ? "border-green-500 bg-green-500"
                           : "border-gray-300"
                       }`}
                     >
-                      {totemState.paymentMethod?.startsWith("card_") && (
+                      {totemState.paymentMethod === "card_credit" && (
                         <Check className="h-4 w-4 text-white" />
                       )}
                     </div>
-                    <CreditCard className="h-8 w-8 mr-4" />
-                    <span className="text-xl font-semibold">Cartão</span>
+                    <Landmark className="h-8 w-8 mr-4 text-blue-500" />
+                    <span className="text-xl font-semibold">
+                      Cartão de Crédito
+                    </span>
                   </div>
 
-                  {/* Sub-opções do cartão */}
-                  {totemState.paymentMethod === "card" && (
-                    <div className="ml-8 space-y-3 border-l-2 border-gray-200 pl-4">
-                      <div
-                        className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${
-                          totemState.cardType === "credit"
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                        onClick={() => handleCardTypeSelect("credit")}
-                      >
-                        <div
-                          className={`w-5 h-5 rounded-full border mr-3 flex items-center justify-center ${
-                            totemState.cardType === "credit"
-                              ? "border-blue-500 bg-blue-500"
-                              : "border-gray-300"
-                          }`}
-                        >
-                          {totemState.cardType === "credit" && (
-                            <Check className="h-3 w-3 text-white" />
-                          )}
-                        </div>
-                        <Landmark className="h-5 w-5 mr-3 text-blue-500" />
-                        <span>Cartão de Crédito</span>
-                      </div>
-
-                      <div
-                        className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${
-                          totemState.cardType === "debit"
-                            ? "border-green-500 bg-green-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                        onClick={() => handleCardTypeSelect("debit")}
-                      >
-                        <div
-                          className={`w-5 h-5 rounded-full border mr-3 flex items-center justify-center ${
-                            totemState.cardType === "debit"
-                              ? "border-green-500 bg-green-500"
-                              : "border-gray-300"
-                          }`}
-                        >
-                          {totemState.cardType === "debit" && (
-                            <Check className="h-3 w-3 text-white" />
-                          )}
-                        </div>
-                        <CreditCard className="h-5 w-5 mr-3 text-green-500" />
-                        <span>Cartão de Débito</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Outras opções de pagamento */}
-                  {[
-                    { id: "pix", name: "PIX", icon: Smartphone },
-                    { id: "cash", name: "Dinheiro", icon: DollarSign },
-                  ].map((method) => (
+                  {/* Cartão de Débito */}
+                  <div
+                    className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                      totemState.paymentMethod === "card_debit"
+                        ? "border-green-500 bg-green-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                    onClick={() => handlePaymentSelect("card_debit")}
+                  >
                     <div
-                      key={method.id}
-                      className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                        totemState.paymentMethod === method.id
-                          ? "border-green-500 bg-green-50"
-                          : "border-gray-200 hover:border-gray-300"
+                      className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center ${
+                        totemState.paymentMethod === "card_debit"
+                          ? "border-green-500 bg-green-500"
+                          : "border-gray-300"
                       }`}
-                      onClick={() => {
-                        totemState.setPaymentMethod(method.id as any);
-                        totemState.setCardType(null);
-                      }}
                     >
-                      <div
-                        className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center ${
-                          totemState.paymentMethod === method.id
-                            ? "border-green-500 bg-green-500"
-                            : "border-gray-300"
-                        }`}
-                      >
-                        {totemState.paymentMethod === method.id && (
-                          <Check className="h-4 w-4 text-white" />
-                        )}
-                      </div>
-                      <method.icon className="h-8 w-8 mr-4" />
-                      <span className="text-xl font-semibold">
-                        {method.name}
-                      </span>
+                      {totemState.paymentMethod === "card_debit" && (
+                        <Check className="h-4 w-4 text-white" />
+                      )}
                     </div>
-                  ))}
+                    <CreditCard className="h-8 w-8 mr-4 text-green-500" />
+                    <span className="text-xl font-semibold">
+                      Cartão de Débito
+                    </span>
+                  </div>
+
+                  {/* PIX */}
+                  <div
+                    className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                      totemState.paymentMethod === "pix"
+                        ? "border-green-500 bg-green-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                    onClick={() => handlePaymentSelect("pix")}
+                  >
+                    <div
+                      className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center ${
+                        totemState.paymentMethod === "pix"
+                          ? "border-green-500 bg-green-500"
+                          : "border-gray-300"
+                      }`}
+                    >
+                      {totemState.paymentMethod === "pix" && (
+                        <Check className="h-4 w-4 text-white" />
+                      )}
+                    </div>
+                    <Smartphone className="h-8 w-8 mr-4" />
+                    <span className="text-xl font-semibold">PIX</span>
+                  </div>
+
+                  {/* Dinheiro */}
+                  <div
+                    className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                      totemState.paymentMethod === "cash"
+                        ? "border-green-500 bg-green-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                    onClick={() => handlePaymentSelect("cash")}
+                  >
+                    <div
+                      className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center ${
+                        totemState.paymentMethod === "cash"
+                          ? "border-green-500 bg-green-500"
+                          : "border-gray-300"
+                      }`}
+                    >
+                      {totemState.paymentMethod === "cash" && (
+                        <Check className="h-4 w-4 text-white" />
+                      )}
+                    </div>
+                    <DollarSign className="h-8 w-8 mr-4" />
+                    <span className="text-xl font-semibold">Dinheiro</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -531,13 +604,13 @@ export function CustomerDataScreen({
               <Button
                 className="flex-1 bg-green-600 hover:bg-green-700"
                 onClick={processPayment}
-                disabled={
-                  !totemState.paymentMethod ||
-                  (totemState.paymentMethod === "card" && !totemState.cardType)
-                }
+                disabled={!totemState.paymentMethod || isLoading}
               >
-                Confirmar Pagamento - R${" "}
-                {totemState.calculateCartTotal().toFixed(2)}
+                {isLoading
+                  ? "Processando..."
+                  : `Confirmar Pagamento - R$ ${totemState
+                      .calculateCartTotal()
+                      .toFixed(2)}`}
               </Button>
             </div>
           </>

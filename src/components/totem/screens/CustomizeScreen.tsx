@@ -1,18 +1,14 @@
-// src/components/totem/screens/CustomizeScreen.tsx
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Check, X, ChevronRight, Home, ShoppingBag } from "lucide-react";
-import { DashboardData, ComplementItem, RemovableIngredient } from "../types";
+// ✅ Usar o separator simples
+import { Separator } from "@/components/ui/separator-simple";
+import { ArrowLeft, Plus, Minus, ShoppingCart, Star, X } from "lucide-react";
+import { DashboardData } from "../types";
 import { useTotemState } from "../hooks/useTotemState";
+import { useState } from "react";
 
 interface CustomizeScreenProps {
   dashboardData: DashboardData;
@@ -23,331 +19,335 @@ export function CustomizeScreen({
   dashboardData,
   totemState,
 }: CustomizeScreenProps) {
+  const [quantity, setQuantity] = useState(1);
+
   if (!totemState.selectedProduct) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold text-gray-800 mb-6">Erro</h1>
-          <p className="text-lg text-gray-600">Produto não encontrado.</p>
-          <Button
-            onClick={() => totemState.setCurrentScreen("main")}
-            className="mt-4"
-          >
-            Voltar ao Cardápio
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            Nenhum produto selecionado
+          </h2>
+          <Button onClick={() => totemState.setCurrentScreen("main")}>
+            Voltar ao Menu
           </Button>
         </div>
       </div>
     );
   }
 
-  const handleComplementToggle = (complement: ComplementItem) => {
-    totemState.setProductComplements((prev) => {
-      const exists = prev.find((c) => c.id === complement.id);
-      if (exists) return prev.filter((c) => c.id !== complement.id);
-      return [...prev, complement];
-    });
+  const product = totemState.selectedProduct;
+
+  const calculateItemPrice = () => {
+    const basePrice = product.price;
+    const complementsPrice = totemState.productComplements.reduce(
+      (total, comp) => total + comp.price,
+      0
+    );
+    return basePrice + complementsPrice;
   };
 
-  const handleIngredientToggle = (ingredient: RemovableIngredient) => {
-    totemState.setRemovedIngredients((prev) => {
-      const exists = prev.find((i) => i.id === ingredient.id);
-      if (exists) return prev.filter((i) => i.id !== ingredient.id);
-      return [...prev, ingredient];
-    });
+  const calculateTotalPrice = () => {
+    return calculateItemPrice() * quantity;
   };
 
-  const addToCart = () => {
+  const handleAddToCart = () => {
     const cartItem = {
-      id: Date.now(),
-      ...totemState.selectedProduct!,
+      id: `${product.id}-${Date.now()}`,
+      productId: product.id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      image: product.image,
+      quantity: quantity,
       complements: totemState.productComplements,
       removedIngredients: totemState.removedIngredients,
-      quantity: 1,
+      totalPrice: calculateTotalPrice(),
+      itemPrice: calculateItemPrice(),
     };
-    totemState.setCart((prev) => [...prev, cartItem]);
+
+    totemState.addToCart(cartItem);
+
     totemState.setCurrentScreen("main");
     totemState.setSelectedProduct(null);
     totemState.setProductComplements([]);
     totemState.setRemovedIngredients([]);
   };
 
+  const toggleComplement = (complement: any) => {
+    const isSelected = totemState.productComplements.some(
+      (comp) => comp.id === complement.id
+    );
+
+    if (isSelected) {
+      totemState.setProductComplements(
+        totemState.productComplements.filter(
+          (comp) => comp.id !== complement.id
+        )
+      );
+    } else {
+      totemState.setProductComplements([
+        ...totemState.productComplements,
+        complement,
+      ]);
+    }
+  };
+
+  const toggleRemovedIngredient = (ingredientName: string) => {
+    const isRemoved = totemState.removedIngredients.includes(ingredientName);
+
+    if (isRemoved) {
+      totemState.setRemovedIngredients(
+        totemState.removedIngredients.filter((ing) => ing !== ingredientName)
+      );
+    } else {
+      totemState.setRemovedIngredients([
+        ...totemState.removedIngredients,
+        ingredientName,
+      ]);
+    }
+  };
+
+  const removableIngredients =
+    product.ingredients?.filter((ing: any) => ing.is_removable) || [];
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header do produto com tipo de pedido */}
-        <div className="flex items-center justify-between mb-4">
-          <Badge
-            variant="secondary"
-            className={
-              totemState.orderType === "dine-in"
-                ? "bg-green-100 text-green-800 text-lg"
-                : "bg-blue-100 text-blue-800 text-lg"
-            }
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm p-4">
+        <div className="flex items-center justify-between max-w-6xl mx-auto">
+          <Button
+            variant="ghost"
+            onClick={() => totemState.setCurrentScreen("main")}
+            className="flex items-center gap-2"
           >
-            {totemState.orderType === "dine-in" ? (
-              <>
-                <Home className="h-4 w-4 mr-1" /> Comer no Local
-              </>
-            ) : (
-              <>
-                <ShoppingBag className="h-4 w-4 mr-1" /> Levar para Viagem
-              </>
-            )}
-          </Badge>
+            <ArrowLeft className="h-5 w-5" />
+            Voltar ao Menu
+          </Button>
+
+          <h1 className="text-2xl font-bold text-gray-800">
+            Personalizar Produto
+          </h1>
+
           <Button
             variant="outline"
-            onClick={() => totemState.setCurrentScreen("main")}
+            onClick={() => totemState.setCurrentScreen("cart")}
+            className="flex items-center gap-2"
+            disabled={totemState.cart.length === 0}
           >
-            Voltar ao Cardápio
+            <ShoppingCart className="h-5 w-5" />
+            Carrinho ({totemState.cart.length})
           </Button>
         </div>
+      </div>
 
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="text-6xl mr-6">
-                {totemState.selectedProduct.image}
-              </div>
-              <div>
-                <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                  {totemState.selectedProduct.name}
-                </h2>
-                <p className="text-gray-600 mb-2">
-                  {totemState.selectedProduct.description}
-                </p>
-                <div className="text-2xl font-bold text-green-600">
-                  R\$ {totemState.selectedProduct.price.toFixed(2)}
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Produto Selecionado */}
+          <div>
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-center mb-6">
+                  <div className="text-8xl mb-4">{product.image}</div>
+                  <h2 className="text-3xl font-bold text-gray-800 mb-2">
+                    {product.name}
+                  </h2>
+                  <p className="text-gray-600 mb-4">{product.description}</p>
+
+                  <div className="flex items-center justify-center gap-2 mb-4">
+                    {product.originalPrice && (
+                      <span className="text-xl text-gray-500 line-through">
+                        R$ {product.originalPrice.toFixed(2)}
+                      </span>
+                    )}
+                    <span className="text-4xl font-bold text-green-600">
+                      R$ {product.price.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {product.bestseller && (
+                    <Badge className="bg-yellow-500 text-black">
+                      <Star className="h-4 w-4 mr-1" />
+                      Mais Vendido
+                    </Badge>
+                  )}
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Navegação entre etapas */}
-        <div className="flex mb-6">
-          <Button
-            variant={
-              totemState.customizationStep === "complements"
-                ? "default"
-                : "outline"
-            }
-            className="flex-1 mr-2"
-            onClick={() => totemState.setCustomizationStep("complements")}
-          >
-            1. Adicionar Complementos
-          </Button>
-          <Button
-            variant={
-              totemState.customizationStep === "ingredients"
-                ? "default"
-                : "outline"
-            }
-            className="flex-1 ml-2"
-            onClick={() => totemState.setCustomizationStep("ingredients")}
-          >
-            2. Remover Ingredientes
-          </Button>
-        </div>
+                {/* Controle de Quantidade */}
+                <div className="flex items-center justify-center gap-4 mb-6">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    disabled={quantity <= 1}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="text-2xl font-bold w-16 text-center">
+                    {quantity}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setQuantity(quantity + 1)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
 
-        {/* Complementos opcionais */}
-        {totemState.customizationStep === "complements" && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-2xl">Complementos Opcionais</CardTitle>
-              <CardDescription className="text-lg">
-                Selecione os complementos que deseja adicionar
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {dashboardData.complementItems.map((complement) => {
-                  const isSelected = totemState.productComplements.find(
-                    (c) => c.id === complement.id
-                  );
-
-                  return (
-                    <div
-                      key={complement.id}
-                      className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                        isSelected
-                          ? "border-green-500 bg-green-50"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                      onClick={() => handleComplementToggle(complement)}
-                    >
-                      <div className="flex items-center">
+                {/* Ingredientes */}
+                {product.ingredients && product.ingredients.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-3">
+                      Ingredientes:
+                    </h3>
+                    <div className="space-y-2">
+                      {product.ingredients.map((ingredient: any) => (
                         <div
-                          className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center ${
-                            isSelected
-                              ? "border-green-500 bg-green-500"
-                              : "border-gray-300"
-                          }`}
+                          key={ingredient.id}
+                          className="flex items-center justify-between p-2 bg-gray-50 rounded"
                         >
-                          {isSelected && (
-                            <Check className="h-4 w-4 text-white" />
+                          <span className="text-gray-700">
+                            {ingredient.ingredient_name}
+                          </span>
+                          {!ingredient.is_removable && (
+                            <Badge variant="secondary">Obrigatório</Badge>
                           )}
                         </div>
-                        <div>
-                          <h4 className="text-xl font-semibold">
-                            {complement.name}
-                          </h4>
-                          <p className="text-green-600 font-bold">
-                            + R\$ {complement.price.toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-              <div className="flex justify-between mt-6">
-                <Button
-                  variant="outline"
-                  onClick={() => totemState.setCurrentScreen("main")}
-                >
-                  Voltar
-                </Button>
-                <Button
-                  onClick={() => totemState.setCustomizationStep("ingredients")}
-                >
-                  Próximo: Ingredientes
-                  <ChevronRight className="h-5 w-5 ml-2" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Remoção de ingredientes */}
-        {totemState.customizationStep === "ingredients" && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-2xl">Remover Ingredientes</CardTitle>
-              <CardDescription className="text-lg">
-                Selecione os ingredientes que NÃO deseja no seu produto
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {dashboardData.removableIngredients.map((ingredient) => {
-                  const isSelected = totemState.removedIngredients.find(
-                    (i) => i.id === ingredient.id
-                  );
-
-                  return (
-                    <div
-                      key={ingredient.id}
-                      className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                        isSelected
-                          ? "border-red-500 bg-red-50"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                      onClick={() => handleIngredientToggle(ingredient)}
-                    >
-                      <div className="flex items-center">
+          {/* Personalização */}
+          <div className="space-y-6">
+            {/* Remover Ingredientes */}
+            {removableIngredients.length > 0 && (
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-xl font-bold mb-4">
+                    Remover Ingredientes
+                  </h3>
+                  <div className="space-y-3">
+                    {removableIngredients.map((ingredient: any) => {
+                      const isRemoved = totemState.removedIngredients.includes(
+                        ingredient.ingredient_name
+                      );
+                      return (
                         <div
-                          className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center ${
-                            isSelected
-                              ? "border-red-500 bg-red-500"
-                              : "border-gray-300"
+                          key={ingredient.id}
+                          className={`flex items-center justify-between p-3 border rounded cursor-pointer transition-colors ${
+                            isRemoved
+                              ? "bg-red-50 border-red-200"
+                              : "bg-white border-gray-200 hover:bg-gray-50"
                           }`}
+                          onClick={() =>
+                            toggleRemovedIngredient(ingredient.ingredient_name)
+                          }
                         >
-                          {isSelected && <X className="h-4 w-4 text-white" />}
+                          <span className="font-medium">
+                            {ingredient.ingredient_name}
+                          </span>
+                          {isRemoved && <X className="h-5 w-5 text-red-500" />}
                         </div>
-                        <div>
-                          <h4 className="text-xl font-semibold">
-                            {ingredient.name}
-                          </h4>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Complementos */}
+            {dashboardData.complementItems.length > 0 && (
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-xl font-bold mb-4">
+                    Adicionar Complementos
+                  </h3>
+                  <div className="space-y-3">
+                    {dashboardData.complementItems.map((complement) => {
+                      const isSelected = totemState.productComplements.some(
+                        (comp) => comp.id === complement.id
+                      );
+                      return (
+                        <div
+                          key={complement.id}
+                          className={`flex items-center justify-between p-3 border rounded cursor-pointer transition-colors ${
+                            isSelected
+                              ? "bg-green-50 border-green-200"
+                              : "bg-white border-gray-200 hover:bg-gray-50"
+                          }`}
+                          onClick={() => toggleComplement(complement)}
+                        >
+                          <div>
+                            <span className="font-medium">
+                              {complement.name}
+                            </span>
+                            <div className="text-green-600 font-bold">
+                              + R$ {complement.price.toFixed(2)}
+                            </div>
+                          </div>
                           {isSelected && (
-                            <p className="text-red-600 font-bold">
-                              Será removido
-                            </p>
+                            <div className="text-green-600">
+                              <Plus className="h-5 w-5" />
+                            </div>
                           )}
                         </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-              <div className="flex justify-between mt-6">
+            {/* Resumo e Adicionar ao Carrinho */}
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="text-xl font-bold mb-4">Resumo do Pedido</h3>
+
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between">
+                    <span>Produto base:</span>
+                    <span>R$ {product.price.toFixed(2)}</span>
+                  </div>
+
+                  {totemState.productComplements.map((comp) => (
+                    <div key={comp.id} className="flex justify-between text-sm">
+                      <span>+ {comp.name}:</span>
+                      <span>R$ {comp.price.toFixed(2)}</span>
+                    </div>
+                  ))}
+
+                  <div className="flex justify-between">
+                    <span>Quantidade:</span>
+                    <span>{quantity}x</span>
+                  </div>
+
+                  {/* ✅ Separator simples */}
+                  <Separator className="my-3" />
+
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total:</span>
+                    <span className="text-green-600">
+                      R$ {calculateTotalPrice().toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
                 <Button
-                  variant="outline"
-                  onClick={() => totemState.setCustomizationStep("complements")}
+                  onClick={handleAddToCart}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white text-lg py-6"
                 >
-                  Voltar: Complementos
-                </Button>
-                <Button
-                  className="bg-green-600 hover:bg-green-700"
-                  onClick={addToCart}
-                >
-                  <Plus className="h-5 w-5 mr-2" />
+                  <ShoppingCart className="h-5 w-5 mr-2" />
                   Adicionar ao Carrinho
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Resumo do produto */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Resumo do Produto</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <p>
-                <strong>Produto:</strong> {totemState.selectedProduct.name}
-              </p>
-              <p>
-                <strong>Preço base:</strong> R\${" "}
-                {totemState.selectedProduct.price.toFixed(2)}
-              </p>
-
-              {totemState.productComplements.length > 0 && (
-                <div>
-                  <p>
-                    <strong>Complementos:</strong>
-                  </p>
-                  <ul className="ml-4">
-                    {totemState.productComplements.map((comp) => (
-                      <li key={comp.id}>
-                        • {comp.name} (+R\$ {comp.price.toFixed(2)})
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {totemState.removedIngredients.length > 0 && (
-                <div>
-                  <p>
-                    <strong>Ingredientes removidos:</strong>
-                  </p>
-                  <ul className="ml-4">
-                    {totemState.removedIngredients.map((ing) => (
-                      <li key={ing.id} className="text-red-600">
-                        • Sem {ing.name}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div className="text-xl font-bold text-green-600 pt-2 border-t">
-                Total: R\${" "}
-                {(
-                  totemState.selectedProduct.price +
-                  totemState.productComplements.reduce(
-                    (total, comp) => total + comp.price,
-                    0
-                  )
-                ).toFixed(2)}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

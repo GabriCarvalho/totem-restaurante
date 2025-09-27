@@ -1,101 +1,133 @@
 import { useState } from "react";
-import {
-  ScreenType,
-  SystemError,
-  OrderType,
-  PaymentMethod,
-  CardType,
-  InputStep,
-  CustomizationStep,
-  CartItem,
-  CustomerData,
-  Product,
-  ComplementItem,
-  RemovableIngredient,
-} from "../../../types";
 
 export function useTotemState() {
-  const [currentScreen, setCurrentScreen] = useState<ScreenType>("welcome");
-  const [orderType, setOrderType] = useState<OrderType>(null);
-  const [selectedCategory, setSelectedCategory] = useState("bestsellers");
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [productComplements, setProductComplements] = useState<
-    ComplementItem[]
-  >([]);
-  const [removedIngredients, setRemovedIngredients] = useState<
-    RemovableIngredient[]
-  >([]);
+  // Estados principais - INICIAR COM A PRIMEIRA CATEGORIA (será "Mais Vendidos")
+  const [currentScreen, setCurrentScreen] = useState<string>("welcome");
+  const [selectedCategory, setSelectedCategory] = useState<string>(""); // ✅ Vazio inicialmente, será definido quando carregar as categorias
+  const [orderType, setOrderType] = useState<"dine-in" | "takeaway" | null>(
+    null
+  );
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [systemError, setSystemError] = useState<string | null>(null);
+  const [showAdmin, setShowAdmin] = useState(false);
+
+  // Estados do produto selecionado
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [productComplements, setProductComplements] = useState<any[]>([]);
+  const [removedIngredients, setRemovedIngredients] = useState<string[]>([]);
   const [customizationStep, setCustomizationStep] =
-    useState<CustomizationStep>("complements");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(null);
-  const [cardType, setCardType] = useState<CardType>(null);
-  const [customerData, setCustomerData] = useState<CustomerData>({
+    useState<string>("complements");
+
+  // Estados do carrinho
+  const [cart, setCart] = useState<any[]>([]);
+
+  // Estados do cliente
+  const [customerData, setCustomerData] = useState({
     name: "",
     cpf: "",
     wantsReceipt: false,
   });
-  const [inputStep, setInputStep] = useState<InputStep>("receipt");
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [systemError, setSystemError] = useState<SystemError>(null);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [inputStep, setInputStep] = useState<string>("receipt");
+  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+  const [cardType, setCardType] = useState<string | null>(null);
 
-  const calculateCartTotal = (): number => {
+  // Funções do carrinho
+  const addToCart = (item: any) => {
+    setCart((prev) => [...prev, { ...item, id: Date.now().toString() }]);
+  };
+
+  const removeFromCart = (itemId: string) => {
+    setCart((prev) => prev.filter((item) => item.id !== itemId));
+  };
+
+  const updateCartItem = (itemId: string, updates: any) => {
+    setCart((prev) =>
+      prev.map((item) => (item.id === itemId ? { ...item, ...updates } : item))
+    );
+  };
+
+  const calculateCartTotal = () => {
     return cart.reduce((total, item) => {
-      const complementsTotal =
-        item.complements?.reduce(
-          (compTotal, comp) => compTotal + comp.price,
+      const itemTotal =
+        item.price +
+        (item.complements?.reduce(
+          (sum: number, comp: any) => sum + comp.price,
           0
-        ) || 0;
-      return total + (item.price + complementsTotal) * item.quantity;
+        ) || 0);
+      return total + itemTotal * item.quantity;
     }, 0);
   };
 
   const resetOrder = () => {
-    setCart([]);
     setCurrentScreen("welcome");
+    setSelectedCategory(""); // ✅ Resetar para vazio, será definido quando carregar
     setOrderType(null);
-    setPaymentMethod(null);
-    setCardType(null);
-    setCustomerData({ name: "", cpf: "", wantsReceipt: false });
-    setInputStep("receipt");
     setSelectedProduct(null);
     setProductComplements([]);
     setRemovedIngredients([]);
+    setCart([]);
+    setCustomerData({ name: "", cpf: "", wantsReceipt: false });
+    setInputStep("receipt");
+    setPaymentMethod(null);
+    setCardType(null);
+  };
+
+  // ✅ Função para definir categoria inicial
+  const initializeWithFirstCategory = (categories: any[]) => {
+    if (selectedCategory === "" && categories.length > 0) {
+      // Procurar por "Mais Vendidos" primeiro
+      const bestsellersCategory = categories.find(
+        (cat) => cat.name === "Mais Vendidos"
+      );
+      if (bestsellersCategory) {
+        setSelectedCategory(bestsellersCategory.id);
+      } else {
+        // Se não encontrar, usar a primeira categoria
+        setSelectedCategory(categories[0].id);
+      }
+    }
   };
 
   return {
+    // Estados
     currentScreen,
-    orderType,
     selectedCategory,
+    orderType,
+    isInitialLoading,
+    systemError,
+    showAdmin,
     selectedProduct,
-    cart,
     productComplements,
     removedIngredients,
     customizationStep,
-    paymentMethod,
-    cardType,
+    cart,
     customerData,
     inputStep,
-    showAdmin,
-    systemError,
-    isInitialLoading,
+    paymentMethod,
+    cardType,
+
+    // Setters
     setCurrentScreen,
-    setOrderType,
     setSelectedCategory,
+    setOrderType,
+    setIsInitialLoading,
+    setSystemError,
+    setShowAdmin,
     setSelectedProduct,
-    setCart,
     setProductComplements,
     setRemovedIngredients,
     setCustomizationStep,
-    setPaymentMethod,
-    setCardType,
     setCustomerData,
     setInputStep,
-    setShowAdmin,
-    setSystemError,
-    setIsInitialLoading,
+    setPaymentMethod,
+    setCardType,
+
+    // Funções
+    addToCart,
+    removeFromCart,
+    updateCartItem,
     calculateCartTotal,
     resetOrder,
+    initializeWithFirstCategory, // ✅ Nova função
   };
 }
