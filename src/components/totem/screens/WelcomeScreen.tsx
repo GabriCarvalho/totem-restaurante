@@ -18,42 +18,57 @@ export function WelcomeScreen({
 }: WelcomeScreenProps) {
   return (
     <div
-      className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-6 cursor-pointer relative"
+      className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100 flex flex-col items-center justify-center p-6 cursor-pointer relative"
       onClick={onStart}
     >
-      {/* Botões de teste para desenvolvimento */}
-      {process.env.NODE_ENV === "development" && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 flex gap-2">
-          <Button
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onTriggerError("network");
-            }}
-          >
-            Teste Erro Rede
-          </Button>
-          <Button
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onTriggerError("maintenance");
-            }}
-          >
-            Teste Manutenção
-          </Button>
-        </div>
-      )}
-
       <div className="text-center max-w-xl select-none">
-        <div className="text-8xl mb-6">{restaurant.logo}</div>
-        <h1 className="text-5xl font-semibold text-gray-900 mb-2">
-          {restaurant.name}
-        </h1>
-        <p className="text-lg text-gray-600 mb-12">{restaurant.address}</p>
-        <h2 className="text-3xl font-medium text-gray-700">
-          Toque para começar
-        </h2>
+        <div className="mb-3">
+          <div>
+            <img
+              src={restaurant.logo}
+              alt={restaurant.name}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                console.error("❌ ERRO ao carregar logo:", restaurant.logo);
+                const target = e.target as HTMLImageElement;
+                target.style.display = "none";
+                if (target.nextElementSibling) {
+                  (target.nextElementSibling as HTMLElement).style.display =
+                    "flex";
+                }
+              }}
+              onLoad={() => {
+                console.log("✅ Logo carregado com sucesso:", restaurant.logo);
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Nome do restaurante com estilo */}
+        <div className="mb-4">
+          <h1 className="text-6xl font-bold bg-gradient-to-r from-orange-600 via-red-600 to-orange-700 bg-clip-text text-transparent mb-2 drop-shadow-sm">
+            {restaurant.name}
+          </h1>
+          <div className="w-24 h-1 bg-gradient-to-r from-orange-400 to-red-500 mx-auto rounded-full"></div>
+        </div>
+
+        <p className="text-xl text-gray-600 mb-16 font-medium">
+          {restaurant.address}
+        </p>
+
+        {/* Call to action melhorado */}
+        <div className="relative">
+          <h2 className="text-4xl font-semibold text-gray-700 mb-4">
+            Toque para começar
+          </h2>
+
+          {/* Indicador visual animado */}
+          <div className="flex justify-center items-center gap-2">
+            <div className="w-3 h-3 bg-orange-400 rounded-full animate-bounce"></div>
+            <div className="w-3 h-3 bg-orange-500 rounded-full animate-bounce delay-100"></div>
+            <div className="w-3 h-3 bg-orange-600 rounded-full animate-bounce delay-200"></div>
+          </div>
+        </div>
       </div>
 
       {/* Botão secreto para admin */}

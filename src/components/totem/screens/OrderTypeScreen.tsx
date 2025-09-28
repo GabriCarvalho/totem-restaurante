@@ -16,11 +16,30 @@ export function OrderTypeScreen({
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
       <div className="text-center max-w-2xl w-full">
-        <div className="text-6xl mb-8">{restaurant.logo}</div>
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">
-          {restaurant.name}
-        </h1>
-        <p className="text-lg text-gray-600 mb-12">Como você prefere hoje?</p>
+        {/* ✅ LOGO DE IMAGEM - MESMO ESTILO DA WELCOME SCREEN */}
+        <div className="mb-90">
+          <div>
+            <img
+              src={restaurant.logo}
+              alt={restaurant.name}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                console.error("❌ ERRO ao carregar logo:", restaurant.logo);
+                const target = e.target as HTMLImageElement;
+                target.style.display = "none";
+                if (target.nextElementSibling) {
+                  (target.nextElementSibling as HTMLElement).style.display =
+                    "flex";
+                }
+              }}
+              onLoad={() => {
+                console.log("✅ Logo carregado com sucesso:", restaurant.logo);
+              }}
+            />
+          </div>
+        </div>
+        <h1 className="text-lg text-gray-600 mb-12">Como você prefere hoje?</h1>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-lg mx-auto">
           <Card
             className="cursor-pointer hover:scale-105 transition-transform duration-200"
@@ -36,6 +55,7 @@ export function OrderTypeScreen({
               </p>
             </CardContent>
           </Card>
+
           <Card
             className="cursor-pointer hover:scale-105 transition-transform duration-200"
             onClick={() => onSelectOrderType("takeaway")}

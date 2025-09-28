@@ -122,7 +122,35 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
         {/* Barra lateral fixa - SEM CARRINHO */}
         <div className="w-80 bg-white shadow-lg p-6">
           <div className="text-center mb-8">
-            <div className="text-4xl mb-2">{dashboardData.restaurant.logo}</div>
+            {/* ✅ LOGO DE IMAGEM - SUBSTITUINDO O EMOJI */}
+            <div className="mb-2">
+              <div className="w-16 h-16 mx-auto bg-gray-200 rounded-lg overflow-hidden shadow-lg border-2 border-gray-300">
+                <img
+                  src={dashboardData.restaurant.logo}
+                  alt={dashboardData.restaurant.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error(
+                      "❌ ERRO ao carregar logo:",
+                      dashboardData.restaurant.logo
+                    );
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = "none";
+                    if (target.nextElementSibling) {
+                      (target.nextElementSibling as HTMLElement).style.display =
+                        "flex";
+                    }
+                  }}
+                  onLoad={() => {
+                    console.log(
+                      "✅ Logo carregado com sucesso:",
+                      dashboardData.restaurant.logo
+                    );
+                  }}
+                />
+              </div>
+            </div>
+
             <h2 className="text-2xl font-bold text-gray-800">
               {dashboardData.restaurant.name}
             </h2>
@@ -235,27 +263,33 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
               >
                 <CardContent className="p-6">
                   <div className="text-center">
-                    <div className="mb-4">
+                    {/* ✅ CONTAINER QUADRADO E SIMÉTRICO PARA IMAGENS */}
+                    <div className="mb-4 mx-auto">
                       {product.image.startsWith("http") ? (
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-32 h-32 object-cover rounded-lg mx-auto shadow-md"
-                          onError={(e) => {
-                            // Fallback para emoji se a imagem não carregar
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = "none";
-                            if (target.nextElementSibling) {
-                              (
-                                target.nextElementSibling as HTMLElement
-                              ).style.display = "block";
-                            }
-                          }}
-                        />
+                        <div className="w-40 h-40 mx-auto bg-gray-100 rounded-xl overflow-hidden shadow-md border-2 border-gray-200">
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // Fallback para emoji se a imagem não carregar
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = "none";
+                              if (target.nextElementSibling) {
+                                (
+                                  target.nextElementSibling as HTMLElement
+                                ).style.display = "flex";
+                              }
+                            }}
+                          />
+                        </div>
                       ) : (
-                        <div className="text-6xl">{product.image}</div>
+                        <div className="w-40 h-40 mx-auto bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl flex items-center justify-center text-6xl shadow-md border-2 border-gray-200">
+                          {product.image}
+                        </div>
                       )}
                     </div>
+
                     <h3 className="text-2xl font-bold text-gray-800 mb-2">
                       {product.name}
                     </h3>

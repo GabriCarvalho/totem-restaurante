@@ -15,11 +15,11 @@ import {
   User,
   CreditCard,
   Smartphone,
-  DollarSign,
   Check,
   Home,
   ShoppingBag,
   Landmark,
+  Ticket,
 } from "lucide-react";
 import { DashboardData } from "../types";
 import { useTotemState } from "../hooks/useTotemState";
@@ -75,6 +75,55 @@ const CPFUtils = {
   },
 
   isComplete: (cpf: string): boolean => CPFUtils.clean(cpf).length === 11,
+};
+
+// ✅ GERADOR DE SENHAS
+const PasswordGenerator = {
+  // Gerar senha numérica sequencial (001, 002, 003...)
+  generateSequential: (): string => {
+    const now = new Date();
+    const dayOfYear = Math.floor(
+      (now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+    const minutesOfDay = now.getHours() * 60 + now.getMinutes();
+    const sequence = ((dayOfYear * 1440 + minutesOfDay) % 999) + 1;
+    return sequence.toString().padStart(3, "0");
+  },
+
+  // Gerar senha alfanumérica (A001, B002, C003...)
+  generateAlphanumeric: (): string => {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const now = new Date();
+    const letterIndex = now.getHours() % 26;
+    const number = ((now.getMinutes() * 60 + now.getSeconds()) % 999) + 1;
+    return `${letters[letterIndex]}${number.toString().padStart(3, "0")}`;
+  },
+
+  // Gerar senha por categoria (L001 = Lanches, B001 = Bebidas...)
+  generateByCategory: (categoryName: string): string => {
+    const categoryMap: { [key: string]: string } = {
+      "Mais Vendidos": "M",
+      Lanches: "L",
+      Bebidas: "B",
+      Sobremesas: "S",
+      Promoções: "P",
+    };
+
+    const prefix = categoryMap[categoryName] || "G"; // G = Geral
+    const now = new Date();
+    const number = ((now.getMinutes() * 60 + now.getSeconds()) % 999) + 1;
+    return `${prefix}${number.toString().padStart(3, "0")}`;
+  },
+
+  // Gerar senha simples baseada no horário
+  generateSimple: (): string => {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, "0");
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+    const seconds = now.getSeconds().toString().padStart(2, "0");
+    return `${hours}${minutes}${seconds.slice(-1)}`; // HHMMS (último dígito dos segundos)
+  },
 };
 
 interface CustomerDataScreenProps {
@@ -182,7 +231,7 @@ export function CustomerDataScreen({
 
   // Funções de pagamento
   const handlePaymentSelect = (
-    method: "card_credit" | "card_debit" | "pix" | "cash"
+    method: "card_credit" | "card_debit" | "pix"
   ) => {
     totemState.setPaymentMethod(method);
     if (method === "card_credit") {
@@ -214,41 +263,53 @@ export function CustomerDataScreen({
         orderId = await orderService.createOrder(orderData);
       }
 
+      // ✅ GERAR SENHA DO PEDIDO
+      const orderPassword = PasswordGenerator.generateSequential(); // Você pode trocar por outro método
+
       // Preparar descrições
       let paymentDescription = "";
       if (totemState.paymentMethod === "card_credit")
         paymentDescription = "Cartão de Crédito";
       else if (totemState.paymentMethod === "card_debit")
         paymentDescription = "Cartão de Débito";
-      else
-        paymentDescription =
-          totemState.paymentMethod === "pix" ? "PIX" : "Dinheiro";
+      else if (totemState.paymentMethod === "pix") paymentDescription = "PIX";
 
       const orderTypeDescription =
         totemState.orderType === "dine-in"
           ? "Comer no Local"
           : "Levar para Viagem";
 
-      // Mostrar confirmação
+      // Mostrar confirmação com senha
       const orderNumber = orderId
         ? orderId.substring(0, 8).toUpperCase()
         : `LOCAL-${Date.now().toString().slice(-6)}`;
 
-      alert(
-        `✅ Pedido realizado com sucesso!\n\n` +
-          `Número do pedido: ${orderNumber}\n` +
-          `Tipo: ${orderTypeDescription}\n` +
-          `Cliente: ${totemState.customerData.name || "Não informado"}\n` +
-          `CPF na nota: ${
-            totemState.customerData.wantsReceipt
-              ? totemState.customerData.cpf || "Não informado"
-              : "Não solicitado"
-          }\n` +
-          `Total: R$ ${totemState.calculateCartTotal().toFixed(2)}\n` +
-          `Pagamento: ${paymentDescription}\n\n` +
-          `Obrigado pela preferência!\n` +
-          `Aguarde a preparação do seu pedido.`
-      );
+      // ✅ MODAL DE SUCESSO COM SENHA EM DESTAQUE
+      const successMessage = `
+🎉 PEDIDO REALIZADO COM SUCESSO!
+
+🎫 SUA SENHA: ${orderPassword}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 Detalhes do Pedido:
+• Número: ${orderNumber}
+• Tipo: ${orderTypeDescription}
+• Cliente: ${totemState.customerData.name || "Não informado"}
+• CPF na nota: ${
+        totemState.customerData.wantsReceipt
+          ? totemState.customerData.cpf || "Não informado"
+          : "Não solicitado"
+      }
+• Total: R$ ${totemState.calculateCartTotal().toFixed(2)}
+• Pagamento: ${paymentDescription}
+
+🕐 Aguarde a chamada da sua senha!
+📢 Fique atento ao painel de senhas.
+
+Obrigado pela preferência! 😊
+      `.trim();
+
+      alert(successMessage);
 
       // Reset do sistema
       totemState.resetOrder();
@@ -490,7 +551,7 @@ export function CustomerDataScreen({
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {/* Cartão de Crédito */}
+                  {/* ✅ CARTÃO DE CRÉDITO */}
                   <div
                     className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                       totemState.paymentMethod === "card_credit"
@@ -516,7 +577,7 @@ export function CustomerDataScreen({
                     </span>
                   </div>
 
-                  {/* Cartão de Débito */}
+                  {/* ✅ CARTÃO DE DÉBITO */}
                   <div
                     className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                       totemState.paymentMethod === "card_debit"
@@ -542,7 +603,7 @@ export function CustomerDataScreen({
                     </span>
                   </div>
 
-                  {/* PIX */}
+                  {/* ✅ PIX */}
                   <div
                     className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                       totemState.paymentMethod === "pix"
@@ -564,30 +625,6 @@ export function CustomerDataScreen({
                     </div>
                     <Smartphone className="h-8 w-8 mr-4" />
                     <span className="text-xl font-semibold">PIX</span>
-                  </div>
-
-                  {/* Dinheiro */}
-                  <div
-                    className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                      totemState.paymentMethod === "cash"
-                        ? "border-green-500 bg-green-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                    onClick={() => handlePaymentSelect("cash")}
-                  >
-                    <div
-                      className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center ${
-                        totemState.paymentMethod === "cash"
-                          ? "border-green-500 bg-green-500"
-                          : "border-gray-300"
-                      }`}
-                    >
-                      {totemState.paymentMethod === "cash" && (
-                        <Check className="h-4 w-4 text-white" />
-                      )}
-                    </div>
-                    <DollarSign className="h-8 w-8 mr-4" />
-                    <span className="text-xl font-semibold">Dinheiro</span>
                   </div>
                 </div>
               </CardContent>
