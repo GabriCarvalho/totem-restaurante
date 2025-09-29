@@ -9,11 +9,6 @@ import {
   ShoppingCart,
   ChevronRight,
   Star,
-  Package,
-  Utensils,
-  Coffee,
-  IceCream2,
-  Tag,
   X,
   Check,
   Eye,
@@ -29,26 +24,24 @@ interface MainScreenProps {
 
 export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
   const getProductsByCategory = (categoryId: string): Product[] => {
+    // ✅ CATEGORIA ESPECIAL "TODOS_OS_PRODUTOS" - SEMPRE RETORNA TODOS
+    if (categoryId === "TODOS_OS_PRODUTOS") {
+      return dashboardData.products || [];
+    }
+
     // Encontrar a categoria selecionada
     const selectedCategory = dashboardData.categories.find(
       (cat) => cat.id === categoryId
     );
 
-    // Se for a categoria "Mais Vendidos" (verificar pelo nome)
+    // Se for a categoria "Mais Vendidos"
     if (selectedCategory?.name === "Mais Vendidos") {
-      // Retornar TODOS os produtos que são bestsellers
-      const bestsellers = dashboardData.products.filter(
+      return dashboardData.products.filter(
         (product) => product.bestseller === true
       );
-      console.log("⭐ Produtos mais vendidos encontrados:", bestsellers.length);
-      console.log(
-        "⭐ Lista:",
-        bestsellers.map((p) => p.name)
-      );
-      return bestsellers;
     }
 
-    // Para outras categorias, filtrar por category_id ou category
+    // Para outras categorias específicas
     return dashboardData.products.filter(
       (product) =>
         product.category_id === categoryId ||
@@ -64,38 +57,10 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
     totemState.setCurrentScreen("customize");
   };
 
-  // Função para obter o ícone correto da categoria
-  const getCategoryIcon = (category: any) => {
-    if (category.icon) {
-      return category.icon;
-    }
+  // ✅ SE NENHUMA CATEGORIA SELECIONADA, USAR "TODOS_OS_PRODUTOS" POR PADRÃO
+  const currentCategory = totemState.selectedCategory || "TODOS_OS_PRODUTOS";
+  const products = getProductsByCategory(currentCategory);
 
-    const iconMap: { [key: string]: any } = {
-      Star: Star,
-      Utensils: Utensils,
-      Coffee: Coffee,
-      IceCream2: IceCream2,
-      Tag: Tag,
-      Package: Package,
-    };
-
-    return iconMap[category.icon_name] || Package;
-  };
-
-  // Função para contar produtos por categoria
-  const getProductCount = (category: any) => {
-    // Se for "Mais Vendidos", contar produtos com bestseller = true
-    if (category.name === "Mais Vendidos") {
-      return dashboardData.products.filter((p) => p.bestseller === true).length;
-    }
-
-    // Para outras categorias
-    return dashboardData.products.filter(
-      (p) => p.category_id === category.id || p.category === category.name
-    ).length;
-  };
-
-  const products = getProductsByCategory(totemState.selectedCategory);
   const cartTotal = totemState.calculateCartTotal();
   const itemCount = totemState.cart.reduce(
     (total, item) => total + item.quantity,
@@ -116,13 +81,26 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
     totemState.setCurrentScreen("cart");
   };
 
+  // ✅ FUNÇÃO PARA OBTER O TÍTULO DA SEÇÃO
+  const getSectionTitle = () => {
+    if (currentCategory === "TODOS_OS_PRODUTOS") {
+      return "Todos os Produtos";
+    }
+
+    const selectedCategory = dashboardData.categories.find(
+      (c) => c.id === currentCategory
+    );
+
+    return selectedCategory?.name || "Produtos";
+  };
+
   return (
     <>
       <div className="min-h-screen bg-gray-50 flex relative">
-        {/* Barra lateral fixa - SEM CARRINHO */}
-        <div className="w-80 bg-white shadow-lg p-6">
+        {/* ✅ BARRA LATERAL COM LINHA SEPARADORA */}
+        <div className="w-80 bg-white shadow-lg p-6 border-r-[20px] border-gray-300">
           <div className="text-center mb-8">
-            {/* ✅ LOGO DE IMAGEM - SUBSTITUINDO O EMOJI */}
+            {/* ✅ LOGO DE IMAGEM */}
             <div className="mb-2">
               <div className="w-16 h-16 mx-auto bg-gray-200 rounded-lg overflow-hidden shadow-lg border-2 border-gray-300">
                 <img
@@ -130,22 +108,12 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
                   alt={dashboardData.restaurant.name}
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    console.error(
-                      "❌ ERRO ao carregar logo:",
-                      dashboardData.restaurant.logo
-                    );
                     const target = e.target as HTMLImageElement;
                     target.style.display = "none";
                     if (target.nextElementSibling) {
                       (target.nextElementSibling as HTMLElement).style.display =
                         "flex";
                     }
-                  }}
-                  onLoad={() => {
-                    console.log(
-                      "✅ Logo carregado com sucesso:",
-                      dashboardData.restaurant.logo
-                    );
                   }}
                 />
               </div>
@@ -185,58 +153,71 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
             )}
           </div>
 
-          <div className="space-y-2">
-            {dashboardData.categories.map((category) => {
-              const IconComponent = getCategoryIcon(category);
-              const productCount = getProductCount(category);
+          {/* ✅ CATEGORIAS COM CATEGORIA FIXA "TODOS OS PRODUTOS" */}
+          <div className="space-y-6">
+            {/* ✅ CATEGORIA FIXA "TODOS OS PRODUTOS" NO TOPO */}
+            <div>
+              <Button
+                variant={
+                  currentCategory === "TODOS_OS_PRODUTOS" ? "default" : "ghost"
+                }
+                className="w-full justify-start text-left h-16 text-xl font-semibold"
+                onClick={() =>
+                  totemState.setSelectedCategory("TODOS_OS_PRODUTOS")
+                }
+              >
+                Todos os Produtos
+                <ChevronRight className="h-5 w-5 ml-auto text-black" />
+              </Button>
+              <div className="h-px bg-gray-200 mx-6 mt-6"></div>
+            </div>
 
-              return (
+            {/* ✅ CATEGORIAS NORMAIS DO SISTEMA */}
+            {dashboardData.categories.map((category, index) => (
+              <div key={category.id}>
                 <Button
-                  key={category.id}
                   variant={
-                    totemState.selectedCategory === category.id
-                      ? "default"
-                      : "ghost"
+                    currentCategory === category.id ? "default" : "ghost"
                   }
-                  className="w-full justify-start text-left h-16 text-lg"
+                  className="w-full justify-start text-left h-16 text-xl font-semibold"
                   onClick={() => totemState.setSelectedCategory(category.id)}
                 >
-                  <IconComponent className="h-6 w-6 mr-3 text-black" />
                   {category.name}
-                  {productCount > 0 && (
-                    <Badge variant="secondary" className="ml-auto mr-2">
-                      {productCount}
-                    </Badge>
-                  )}
                   <ChevronRight className="h-5 w-5 ml-auto text-black" />
                 </Button>
-              );
-            })}
+
+                {/* ✅ LINHA SEPARADORA */}
+                {index < dashboardData.categories.length - 1 && (
+                  <div className="h-px bg-gray-200 mx-6 mt-6"></div>
+                )}
+              </div>
+            ))}
 
             {/* Botão para alterar tipo de pedido */}
-            <Button
-              variant="outline"
-              className="w-full justify-start text-left h-12 text-md mt-4"
-              onClick={() => totemState.setCurrentScreen("order-type")}
-            >
-              <ChevronRight className="h-4 w-4 mr-2 rotate-180 text-black" />
-              Alterar Tipo
-            </Button>
+            <div className="pt-6 mt-6 border-t-2 border-gray-300">
+              <Button
+                variant="outline"
+                className="w-full justify-start text-left h-12 text-md"
+                onClick={() => totemState.setCurrentScreen("order-type")}
+              >
+                <ChevronRight className="h-4 w-4 mr-2 rotate-180 text-black" />
+                Alterar Tipo
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Conteúdo principal */}
+        {/* ✅ CONTEÚDO PRINCIPAL */}
         <div
-          className="flex-1 p-6"
+          className="flex-1 p-8"
           style={{
-            paddingBottom: totemState.cart.length > 0 ? "200px" : "24px",
+            paddingBottom: totemState.cart.length > 0 ? "200px" : "32px",
           }}
         >
           <div className="flex items-center justify-between mb-6">
+            {/* ✅ TÍTULO DINÂMICO */}
             <h1 className="text-4xl font-bold text-gray-800">
-              {dashboardData.categories.find(
-                (c) => c.id === totemState.selectedCategory
-              )?.name || "Produtos"}
+              {getSectionTitle()}
             </h1>
 
             {/* Indicador do tipo de pedido no header */}
@@ -263,16 +244,15 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
               >
                 <CardContent className="p-6">
                   <div className="text-center">
-                    {/* ✅ CONTAINER QUADRADO E SIMÉTRICO PARA IMAGENS */}
+                    {/* ✅ CONTAINER PARA IMAGENS */}
                     <div className="mb-4 mx-auto">
-                      {product.image.startsWith("http") ? (
+                      {product.image && product.image.startsWith("http") ? (
                         <div className="w-40 h-40 mx-auto bg-gray-100 rounded-xl overflow-hidden shadow-md border-2 border-gray-200">
                           <img
                             src={product.image}
                             alt={product.name}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              // Fallback para emoji se a imagem não carregar
                               const target = e.target as HTMLImageElement;
                               target.style.display = "none";
                               if (target.nextElementSibling) {
@@ -285,7 +265,7 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
                         </div>
                       ) : (
                         <div className="w-40 h-40 mx-auto bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl flex items-center justify-center text-6xl shadow-md border-2 border-gray-200">
-                          {product.image}
+                          {product.image || "🍔"}
                         </div>
                       )}
                     </div>
@@ -325,14 +305,14 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
                 Nenhum produto encontrado
               </h3>
               <p className="text-gray-500">
-                Esta categoria ainda não possui produtos disponíveis.
+                Esta seção ainda não possui produtos disponíveis.
               </p>
             </div>
           )}
         </div>
       </div>
 
-      {/* 🎨 BARRA HORIZONTAL DOBRADA DE TAMANHO - UX/UI MELHORADA */}
+      {/* 🎨 BARRA HORIZONTAL DO CARRINHO */}
       {totemState.cart.length > 0 && (
         <div
           className="fixed bottom-0 bg-gradient-to-r from-white to-gray-50"
@@ -350,9 +330,8 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
           }}
         >
           <div className="flex items-center justify-between px-10 py-6 w-full">
-            {/* Seção Esquerda: "Meu Pedido" (clicável para ver o carrinho) e "Limpar" */}
+            {/* Seção Esquerda: "Meu Pedido" e "Limpar" */}
             <div className="flex items-center gap-6">
-              {/* Botão "Meu Pedido" / "Ver Carrinho" combinado, agora clicável para navegar */}
               <Button
                 onClick={viewCart}
                 variant="ghost"
@@ -375,7 +354,6 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
                 <ChevronRight className="h-5 w-5 ml-2 text-gray-500" />
               </Button>
 
-              {/* Botão "Limpar" com estilo outline para menor proeminência, mas claro */}
               <Button
                 onClick={clearCart}
                 variant="outline"
@@ -388,7 +366,6 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
 
             {/* Seção Direita: Preço Total e "Finalizar Pedido" */}
             <div className="flex items-center gap-6">
-              {/* Display do Preço Total (não clicável) */}
               <div className="text-right pr-4">
                 <div className="text-md text-gray-600 font-semibold uppercase tracking-wide">
                   Total do Pedido
@@ -398,7 +375,6 @@ export function MainScreen({ dashboardData, totemState }: MainScreenProps) {
                 </div>
               </div>
 
-              {/* Botão "Finalizar Pedido" com destaque principal */}
               <Button
                 onClick={proceedToCheckout}
                 className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-10 py-6 h-14 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-bold text-xl border-0"

@@ -84,7 +84,7 @@ export function CartScreen({ dashboardData, totemState }: CartScreenProps) {
             onClick={() => totemState.setCurrentScreen("main")}
             className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-xl px-12 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
           >
-            <ShoppingCart className="h-6 w-6 mr-3 text-white" />
+            <ShoppingCart className="h-8 w-8 mr-4 text-white stroke-2" />
             Explorar Menu
           </Button>
         </div>
@@ -94,11 +94,11 @@ export function CartScreen({ dashboardData, totemState }: CartScreenProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 flex flex-col">
-      {/* ✅ Header Simplificado */}
+      {/* Header Simplificado */}
       <div className="bg-white shadow-lg border-b-4 border-green-500">
         <div className="max-w-4xl mx-auto px-8 py-6">
-          <h1 className="text-4xl font-bold text-gray-800 flex items-center justify-center gap-3">
-            <ShoppingCart className="h-10 w-10 text-black" />
+          <h1 className="text-4xl font-bold text-gray-800 flex items-center justify-center gap-4">
+            <ShoppingCart className="h-12 w-12 text-gray-800 stroke-2" />
             <span>
               Meu Carrinho ({itemCount} {itemCount === 1 ? "item" : "itens"})
             </span>
@@ -116,7 +116,7 @@ export function CartScreen({ dashboardData, totemState }: CartScreenProps) {
             >
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
-                  {/* ✅ Informações do Item */}
+                  {/* Informações do Item */}
                   <div className="flex-1">
                     <h3 className="text-2xl font-bold text-gray-800 mb-2">
                       {item.name}
@@ -163,58 +163,58 @@ export function CartScreen({ dashboardData, totemState }: CartScreenProps) {
                     </div>
                   </div>
 
-                  {/* ✅ Controles de Quantidade - ÍCONES PRETOS */}
+                  {/* Controles de Quantidade - ÍCONES REFORÇADOS */}
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center border border-gray-200 rounded-xl">
+                    <div className="flex items-center border-2 border-gray-300 rounded-xl bg-white">
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => updateCartItemQuantity(item.id, -1)}
                         disabled={item.quantity <= 1}
-                        className="h-12 w-12 rounded-l-xl hover:bg-gray-50 disabled:opacity-50 border-0"
+                        className="h-14 w-14 rounded-l-xl hover:bg-red-50 disabled:opacity-50 border-0"
                       >
-                        <Minus className="h-5 w-5 text-black" />
+                        <Minus className="h-7 w-7 text-gray-800 stroke-[3]" />
                       </Button>
-                      <span className="text-xl font-bold w-16 text-center border-l border-r border-gray-200 h-12 flex items-center justify-center">
+                      <span className="text-2xl font-bold w-20 text-center border-l-2 border-r-2 border-gray-300 h-14 flex items-center justify-center bg-gray-50">
                         {item.quantity}
                       </span>
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => updateCartItemQuantity(item.id, 1)}
-                        className="h-12 w-12 rounded-r-xl hover:bg-gray-50 border-0"
+                        className="h-14 w-14 rounded-r-xl hover:bg-green-50 border-0"
                       >
-                        <Plus className="h-5 w-5 text-black" />
+                        <Plus className="h-7 w-7 text-gray-800 stroke-[3]" />
                       </Button>
                     </div>
 
-                    {/* ✅ Preço Total */}
+                    {/* Preço Total */}
                     <div className="text-right min-w-[120px]">
                       <div className="text-2xl font-bold text-green-600">
                         R\$ {item.totalPrice.toFixed(2)}
                       </div>
                     </div>
 
-                    {/* ✅ Botão Editar - ÍCONE PRETO */}
+                    {/* Botão Editar - ÍCONE REFORÇADO */}
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="icon"
                       onClick={() => editCartItem(item)}
-                      className="hover:bg-gray-100 rounded-full h-10 w-10"
+                      className=""
                       title="Editar"
                     >
-                      <Edit3 className="h-5 w-5 text-black" />
+                      <Edit3 className="h-7 w-7 text-gray-800 stroke-[3]" />
                     </Button>
 
-                    {/* ✅ Botão Remover - ÍCONE PRETO */}
+                    {/* Botão Remover - ÍCONE REFORÇADO */}
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="icon"
                       onClick={() => removeCartItem(item.id)}
-                      className="hover:bg-gray-100 rounded-full h-10 w-10"
+                      className=""
                       title="Remover"
                     >
-                      <Trash2 className="h-5 w-5 text-black" />
+                      <Trash2 className="h-7 w-7 text-gray-800 stroke-[3]" />
                     </Button>
                   </div>
                 </div>
@@ -224,7 +224,7 @@ export function CartScreen({ dashboardData, totemState }: CartScreenProps) {
         </div>
       </div>
 
-      {/* ✅ Resumo e Botões Fixos no Final da Tela */}
+      {/* Resumo e Botões Fixos no Final da Tela */}
       <div className="bg-white border-t-4 border-green-500 shadow-lg">
         <div className="max-w-4xl mx-auto p-8">
           {/* Resumo do Pedido */}
@@ -248,25 +248,25 @@ export function CartScreen({ dashboardData, totemState }: CartScreenProps) {
             </div>
           </div>
 
-          {/* ✅ Botões no Final - ÍCONES PRETOS */}
+          {/* Botões no Final - ÍCONES REFORÇADOS */}
           <div className="grid grid-cols-2 gap-6">
             {/* Botão Continuar Comprando */}
             <Button
               variant="outline"
               onClick={() => totemState.setCurrentScreen("main")}
-              className="w-full text-xl py-8 rounded-xl border-2 border-gray-300 hover:bg-gray-50 transition-all duration-300 flex items-center justify-center gap-3"
+              className="w-full text-xl py-8 rounded-xl border-3 border-gray-400 hover:bg-gray-50 hover:border-gray-500 transition-all duration-300 flex items-center justify-center gap-4"
             >
-              <ArrowLeft className="h-6 w-6 text-black" />
-              <span>Continuar Comprando</span>
+              <ArrowLeft className="h-8 w-8 text-gray-700 stroke-2" />
+              <span className="font-semibold">Continuar Comprando</span>
             </Button>
 
             {/* Botão Finalizar Pedido */}
             <Button
               onClick={proceedToCheckout}
-              className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-xl py-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3"
+              className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-xl py-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-4"
             >
-              <CreditCard className="h-6 w-6 text-white" />
-              <span>Finalizar Pedido</span>
+              <CreditCard className="h-8 w-8 text-white stroke-2" />
+              <span className="font-semibold">Finalizar Pedido</span>
             </Button>
           </div>
         </div>

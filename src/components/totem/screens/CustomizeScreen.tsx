@@ -164,10 +164,43 @@ export function CustomizeScreen({
           {/* Produto Selecionado - Melhorado */}
           <div className="xl:col-span-1">
             <Card className="sticky top-6 shadow-xl border-0 overflow-hidden">
-              <div className="bg-gradient-to-br from-orange-400 to-orange-500 p-8 text-white text-center">
-                <div className="text-9xl mb-4">{product.image}</div>
-                <h2 className="text-3xl font-bold mb-2">{product.name}</h2>
-                <p className="text-orange-100 text-lg">{product.description}</p>
+              <div className="bg-gradient-to-br from-orange-400 to-orange-500 p-8 text-black text-center">
+                {/* ✅ VERIFICAÇÃO: URL vs EMOJI */}
+                <div className="mb-4">
+                  {product.image && product.image.startsWith("http") ? (
+                    <div className="w-40 h-40 mx-auto bg-white/20 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/30">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-15 h-15 object-cover"
+                        onError={(e) => {
+                          console.error(
+                            "❌ ERRO ao carregar imagem do produto:",
+                            product.image
+                          );
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = "none";
+                          if (target.nextElementSibling) {
+                            (
+                              target.nextElementSibling as HTMLElement
+                            ).style.display = "flex";
+                          }
+                        }}
+                        onLoad={() => {
+                          console.log(
+                            "✅ Imagem do produto carregada:",
+                            product.image
+                          );
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    // ✅ EMOJI se não for URL
+                    <div className="text-9xl mb-4">{product.image || "🍔"}</div>
+                  )}
+                </div>
+
+                <h2 className="text-3xl font-bold mb-1">{product.name}</h2>
               </div>
 
               <CardContent className="p-8">
@@ -278,7 +311,7 @@ export function CustomizeScreen({
                               {ingredient.ingredient_name}
                             </span>
                             {isRemoved && (
-                              <div className="bg-red-500 text-white rounded-full p-2">
+                              <div className="bg-red-500 text-black rounded-full p-2">
                                 <X className="h-5 w-5" />
                               </div>
                             )}
@@ -296,59 +329,60 @@ export function CustomizeScreen({
               </Card>
             )}
 
-            {/* Complementos */}
-            {dashboardData.complementItems.length > 0 && (
-              <Card className="shadow-lg border-0 overflow-hidden">
-                <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 text-black">
-                  <h3 className="text-2xl font-bold flex items-center gap-2">
-                    <Plus className="h-6 w-6" />
-                    Adicionar Complementos
-                  </h3>
-                  <p className="text-green-100 mt-1">
-                    Deixe seu lanche ainda mais saboroso
-                  </p>
-                </div>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {dashboardData.complementItems.map((complement) => {
-                      const isSelected = totemState.productComplements.some(
-                        (comp) => comp.id === complement.id
-                      );
-                      return (
-                        <div
-                          key={complement.id}
-                          className={`relative p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
-                            isSelected
-                              ? "bg-green-50 border-green-300 shadow-lg"
-                              : "bg-white border-gray-200 hover:border-green-300 hover:shadow-md"
-                          }`}
-                          onClick={() => toggleComplement(complement)}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-semibold text-lg">
-                              {complement.name}
-                            </span>
+            {/* ✅ COMPLEMENTOS - CORRIGIDO PARA USAR complementItems */}
+            {dashboardData.complementItems &&
+              dashboardData.complementItems.length > 0 && (
+                <Card className="shadow-lg border-0 overflow-hidden">
+                  <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 text-black">
+                    <h3 className="text-2xl font-bold flex items-center gap-2">
+                      <Plus className="h-6 w-6" />
+                      Adicionar Complementos
+                    </h3>
+                    <p className="text-green-100 mt-1">
+                      Deixe seu lanche ainda mais saboroso
+                    </p>
+                  </div>
+                  <CardContent className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {dashboardData.complementItems.map((complement) => {
+                        const isSelected = totemState.productComplements.some(
+                          (comp) => comp.id === complement.id
+                        );
+                        return (
+                          <div
+                            key={complement.id}
+                            className={`relative p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
+                              isSelected
+                                ? "bg-green-50 border-green-300 shadow-lg"
+                                : "bg-white border-gray-200 hover:border-green-300 hover:shadow-md"
+                            }`}
+                            onClick={() => toggleComplement(complement)}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-semibold text-lg">
+                                {complement.name}
+                              </span>
+                              {isSelected && (
+                                <div className="bg-green-500 text-white rounded-full p-2">
+                                  <Check className="h-5 w-5" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-2xl font-bold text-green-600">
+                              + R$ {complement.price.toFixed(2)}
+                            </div>
                             {isSelected && (
-                              <div className="bg-green-500 text-white rounded-full p-2">
-                                <Check className="h-5 w-5" />
-                              </div>
+                              <p className="text-green-600 text-sm mt-2 font-medium">
+                                ✓ Adicionado ao seu lanche
+                              </p>
                             )}
                           </div>
-                          <div className="text-2xl font-bold text-green-600">
-                            + R$ {complement.price.toFixed(2)}
-                          </div>
-                          {isSelected && (
-                            <p className="text-green-600 text-sm mt-2 font-medium">
-                              ✓ Adicionado ao seu lanche
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
             {/* Resumo e Adicionar ao Carrinho */}
             <Card className="shadow-xl border-0 overflow-hidden">
