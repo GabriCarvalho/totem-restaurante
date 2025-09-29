@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -136,6 +136,28 @@ export function CustomerDataScreen({
   totemState,
 }: CustomerDataScreenProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [screenHeight, setScreenHeight] = useState(0);
+
+  // ✅ HOOK PARA DETECTAR ALTURA DA TELA
+  useEffect(() => {
+    const updateScreenHeight = () => {
+      setScreenHeight(window.innerHeight);
+    };
+
+    // Definir altura inicial
+    updateScreenHeight();
+
+    // Escutar mudanças de tamanho da tela
+    window.addEventListener("resize", updateScreenHeight);
+
+    return () => {
+      window.removeEventListener("resize", updateScreenHeight);
+    };
+  }, []);
+
+  // ✅ CALCULAR ALTURAS DINAMICAMENTE
+  const keyboardHeight = Math.floor(screenHeight * 0.5); // 50% da altura da tela
+  const contentHeight = screenHeight - keyboardHeight; // Restante para o conteúdo
 
   // Funções para manipulação do nome
   const handleNameKeyPress = (char: string) => {
@@ -321,338 +343,396 @@ Obrigado pela preferência! 😊
     }
   };
 
+  // ✅ VERIFICAR SE DEVE MOSTRAR TECLADO
+  const shouldShowKeyboard =
+    totemState.inputStep === "cpf" || totemState.inputStep === "name";
+
+  // ✅ AGUARDAR CÁLCULO DA ALTURA DA TELA
+  if (screenHeight === 0) {
+    return (
+      <div className="h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-2xl text-gray-600">Carregando...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-800">
-              Dados do Cliente
-            </h1>
-            <Badge
-              variant="secondary"
-              className={
-                totemState.orderType === "dine-in"
-                  ? "bg-green-100 text-green-800 mt-2"
-                  : "bg-blue-100 text-blue-800 mt-2"
-              }
-            >
-              {totemState.orderType === "dine-in" ? (
-                <>
-                  <Home className="h-4 w-4 mr-1" /> Comer no Local
-                </>
-              ) : (
-                <>
-                  <ShoppingBag className="h-4 w-4 mr-1" /> Levar para Viagem
-                </>
-              )}
-            </Badge>
-          </div>
-          <Button
-            variant="outline"
-            onClick={() => totemState.setCurrentScreen("cart")}
-          >
-            Voltar ao Carrinho
-          </Button>
-        </div>
-
-        {/* Resumo do pedido */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Resumo do Pedido</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {totemState.cart.map((item) => (
-                <div key={item.id} className="flex justify-between">
-                  <span>
-                    {item.quantity}x {item.name}
-                  </span>
-                  <span>
-                    R${" "}
-                    {(
-                      (item.price +
-                        (item.complements?.reduce(
-                          (total, comp) => total + comp.price,
-                          0
-                        ) || 0)) *
-                      item.quantity
-                    ).toFixed(2)}
-                  </span>
-                </div>
-              ))}
-              <div className="border-t pt-2 flex justify-between font-bold text-xl">
-                <span>Total:</span>
-                <span className="text-green-600">
-                  R$ {totemState.calculateCartTotal().toFixed(2)}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Opção de CPF na nota */}
-        {totemState.inputStep === "receipt" && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-6 w-6" />
-                CPF na Nota Fiscal
-              </CardTitle>
-              <CardDescription>
-                Deseja incluir seu CPF na nota fiscal?
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-4">
-                <Button
-                  className="flex-1 h-16 text-lg"
-                  variant={
-                    totemState.customerData.wantsReceipt ? "default" : "outline"
+    <div className="h-screen bg-gray-50 flex flex-col">
+      {/* ✅ ÁREA SUPERIOR - CONTEÚDO PRINCIPAL (RESPONSIVA) */}
+      <div
+        className="overflow-y-auto"
+        style={{
+          height: shouldShowKeyboard ? `${contentHeight}px` : "100vh",
+        }}
+      >
+        <div className="p-6">
+          <div className="max-w-4xl mx-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-4xl font-bold text-gray-800">
+                  Dados do Cliente
+                </h1>
+                <Badge
+                  variant="secondary"
+                  className={
+                    totemState.orderType === "dine-in"
+                      ? "bg-green-100 text-green-800 mt-2"
+                      : "bg-blue-100 text-blue-800 mt-2"
                   }
-                  onClick={() => handleReceiptOption(true)}
                 >
-                  Sim, incluir CPF
-                </Button>
-                <Button
-                  className="flex-1 h-16 text-lg"
-                  variant={
-                    !totemState.customerData.wantsReceipt
-                      ? "default"
-                      : "outline"
-                  }
-                  onClick={() => handleReceiptOption(false)}
-                >
-                  Não, obrigado
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Inserção de CPF */}
-        {totemState.inputStep === "cpf" && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-6 w-6" />
-                Informe seu CPF
-              </CardTitle>
-              <CardDescription>
-                Digite seu CPF para inclusão na nota fiscal. Será validado
-                automaticamente.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CPFDisplay
-                cpf={totemState.customerData.cpf}
-                showValidation={true}
-              />
-
-              <NumericKeyboard
-                onKeyPress={handleCpfKeyPress}
-                onBackspace={handleCpfBackspace}
-                onClear={handleCpfClear}
-                onConfirm={handleCpfConfirm}
-                disabled={isLoading}
-                confirmDisabled={
-                  !CPFUtils.isComplete(totemState.customerData.cpf) ||
-                  !CPFUtils.validate(totemState.customerData.cpf)
-                }
-              />
-
-              <div className="mt-4 text-center">
-                <Button
-                  variant="ghost"
-                  onClick={() => totemState.setInputStep("name")}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  Pular e continuar sem CPF
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Inserção do nome */}
-        {totemState.inputStep === "name" && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-6 w-6" />
-                Seu Nome (Opcional)
-              </CardTitle>
-              <CardDescription>
-                Digite seu nome para identificação do pedido. Máximo 50
-                caracteres.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center mb-4">
-                <div className="text-xl bg-gray-100 p-4 rounded-lg min-h-[60px] border-2">
-                  {totemState.customerData.name || (
-                    <span className="text-gray-400 italic">
-                      Digite seu nome...
-                    </span>
+                  {totemState.orderType === "dine-in" ? (
+                    <>
+                      <Home className="h-4 w-4 mr-1" /> Comer no Local
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingBag className="h-4 w-4 mr-1" /> Levar para Viagem
+                    </>
                   )}
-                </div>
-                <div className="mt-2 text-sm text-gray-500">
-                  {totemState.customerData.name.length}/50 caracteres
-                </div>
+                </Badge>
               </div>
+              <Button
+                variant="outline"
+                onClick={() => totemState.setCurrentScreen("cart")}
+              >
+                Voltar ao Carrinho
+              </Button>
+            </div>
 
-              <VirtualKeyboard
-                onKeyPress={handleNameKeyPress}
-                onBackspace={handleNameBackspace}
-                onSpace={handleNameSpace}
-                onClear={handleNameClear}
-                onConfirm={handleNameConfirm}
-                disabled={isLoading}
-              />
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Seleção de pagamento */}
-        {totemState.inputStep === "payment" && (
-          <>
+            {/* Resumo do pedido */}
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle>Resumo dos Dados</CardTitle>
+                <CardTitle>Resumo do Pedido</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <p>
-                    <strong>Nome:</strong>{" "}
-                    {totemState.customerData.name?.trim() || "Não informado"}
-                  </p>
-                  <p>
-                    <strong>CPF na nota:</strong>{" "}
-                    {totemState.customerData.wantsReceipt &&
-                    totemState.customerData.cpf
-                      ? totemState.customerData.cpf + " ✅"
-                      : totemState.customerData.wantsReceipt
-                      ? "Não informado"
-                      : "Não solicitado"}
-                  </p>
-                  <p>
-                    <strong>Tipo de pedido:</strong>{" "}
-                    {totemState.orderType === "dine-in"
-                      ? "Comer no Local"
-                      : "Levar para Viagem"}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Escolha a forma de pagamento</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* ✅ CARTÃO DE CRÉDITO */}
-                  <div
-                    className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                      totemState.paymentMethod === "card_credit"
-                        ? "border-green-500 bg-green-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                    onClick={() => handlePaymentSelect("card_credit")}
-                  >
-                    <div
-                      className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center ${
-                        totemState.paymentMethod === "card_credit"
-                          ? "border-green-500 bg-green-500"
-                          : "border-gray-300"
-                      }`}
-                    >
-                      {totemState.paymentMethod === "card_credit" && (
-                        <Check className="h-4 w-4 text-white" />
-                      )}
+                  {totemState.cart.map((item) => (
+                    <div key={item.id} className="flex justify-between">
+                      <span>
+                        {item.quantity}x {item.name}
+                      </span>
+                      <span>
+                        R${" "}
+                        {(
+                          (item.price +
+                            (item.complements?.reduce(
+                              (total, comp) => total + comp.price,
+                              0
+                            ) || 0)) *
+                          item.quantity
+                        ).toFixed(2)}
+                      </span>
                     </div>
-                    <Landmark className="h-8 w-8 mr-4 text-blue-500" />
-                    <span className="text-xl font-semibold">
-                      Cartão de Crédito
+                  ))}
+                  <div className="border-t pt-2 flex justify-between font-bold text-xl">
+                    <span>Total:</span>
+                    <span className="text-green-600">
+                      R$ {totemState.calculateCartTotal().toFixed(2)}
                     </span>
-                  </div>
-
-                  {/* ✅ CARTÃO DE DÉBITO */}
-                  <div
-                    className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                      totemState.paymentMethod === "card_debit"
-                        ? "border-green-500 bg-green-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                    onClick={() => handlePaymentSelect("card_debit")}
-                  >
-                    <div
-                      className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center ${
-                        totemState.paymentMethod === "card_debit"
-                          ? "border-green-500 bg-green-500"
-                          : "border-gray-300"
-                      }`}
-                    >
-                      {totemState.paymentMethod === "card_debit" && (
-                        <Check className="h-4 w-4 text-white" />
-                      )}
-                    </div>
-                    <CreditCard className="h-8 w-8 mr-4 text-green-500" />
-                    <span className="text-xl font-semibold">
-                      Cartão de Débito
-                    </span>
-                  </div>
-
-                  {/* ✅ PIX */}
-                  <div
-                    className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                      totemState.paymentMethod === "pix"
-                        ? "border-green-500 bg-green-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                    onClick={() => handlePaymentSelect("pix")}
-                  >
-                    <div
-                      className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center ${
-                        totemState.paymentMethod === "pix"
-                          ? "border-green-500 bg-green-500"
-                          : "border-gray-300"
-                      }`}
-                    >
-                      {totemState.paymentMethod === "pix" && (
-                        <Check className="h-4 w-4 text-white" />
-                      )}
-                    </div>
-                    <Smartphone className="h-8 w-8 mr-4" />
-                    <span className="text-xl font-semibold">PIX</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <div className="flex gap-4">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => totemState.setInputStep("name")}
-              >
-                Voltar
-              </Button>
-              <Button
-                className="flex-1 bg-green-600 hover:bg-green-700"
-                onClick={processPayment}
-                disabled={!totemState.paymentMethod || isLoading}
-              >
-                {isLoading
-                  ? "Processando..."
-                  : `Confirmar Pagamento - R$ ${totemState
-                      .calculateCartTotal()
-                      .toFixed(2)}`}
-              </Button>
-            </div>
-          </>
-        )}
+            {/* Opção de CPF na nota */}
+            {totemState.inputStep === "receipt" && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-6 w-6" />
+                    CPF na Nota Fiscal
+                  </CardTitle>
+                  <CardDescription>
+                    Deseja incluir seu CPF na nota fiscal?
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-4">
+                    <Button
+                      className="flex-1 h-16 text-lg"
+                      variant={
+                        totemState.customerData.wantsReceipt
+                          ? "default"
+                          : "outline"
+                      }
+                      onClick={() => handleReceiptOption(true)}
+                    >
+                      Sim, incluir CPF
+                    </Button>
+                    <Button
+                      className="flex-1 h-16 text-lg"
+                      variant={
+                        !totemState.customerData.wantsReceipt
+                          ? "default"
+                          : "outline"
+                      }
+                      onClick={() => handleReceiptOption(false)}
+                    >
+                      Não, obrigado
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Inserção de CPF */}
+            {totemState.inputStep === "cpf" && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-6 w-6" />
+                    Informe seu CPF
+                  </CardTitle>
+                  <CardDescription>
+                    Digite seu CPF para inclusão na nota fiscal. Será validado
+                    automaticamente.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <CPFDisplay
+                    cpf={totemState.customerData.cpf}
+                    showValidation={true}
+                  />
+
+                  <div className="mt-4 text-center">
+                    <Button
+                      variant="ghost"
+                      onClick={() => totemState.setInputStep("name")}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      Pular e continuar sem CPF
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Inserção do nome */}
+            {totemState.inputStep === "name" && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-6 w-6" />
+                    Seu Nome (Opcional)
+                  </CardTitle>
+                  <CardDescription>
+                    Digite seu nome para identificação do pedido. Máximo 50
+                    caracteres.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center">
+                    <div className="text-2xl bg-gray-100 p-6 rounded-lg min-h-[80px] border-2 flex items-center justify-center">
+                      {totemState.customerData.name || (
+                        <span className="text-gray-400 italic">
+                          Digite seu nome...
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-2 text-sm text-gray-500">
+                      {totemState.customerData.name.length}/50 caracteres
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Seleção de pagamento */}
+            {totemState.inputStep === "payment" && (
+              <>
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle>Resumo dos Dados</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <p>
+                        <strong>Nome:</strong>{" "}
+                        {totemState.customerData.name?.trim() ||
+                          "Não informado"}
+                      </p>
+                      <p>
+                        <strong>CPF na nota:</strong>{" "}
+                        {totemState.customerData.wantsReceipt &&
+                        totemState.customerData.cpf
+                          ? totemState.customerData.cpf + " ✅"
+                          : totemState.customerData.wantsReceipt
+                          ? "Não informado"
+                          : "Não solicitado"}
+                      </p>
+                      <p>
+                        <strong>Tipo de pedido:</strong>{" "}
+                        {totemState.orderType === "dine-in"
+                          ? "Comer no Local"
+                          : "Levar para Viagem"}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle>Escolha a forma de pagamento</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* ✅ CARTÃO DE CRÉDITO */}
+                      <div
+                        className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                          totemState.paymentMethod === "card_credit"
+                            ? "border-green-500 bg-green-50"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                        onClick={() => handlePaymentSelect("card_credit")}
+                      >
+                        <div
+                          className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center ${
+                            totemState.paymentMethod === "card_credit"
+                              ? "border-green-500 bg-green-500"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          {totemState.paymentMethod === "card_credit" && (
+                            <Check className="h-4 w-4 text-white" />
+                          )}
+                        </div>
+                        <Landmark className="h-8 w-8 mr-4 text-blue-500" />
+                        <span className="text-xl font-semibold">
+                          Cartão de Crédito
+                        </span>
+                      </div>
+
+                      {/* ✅ CARTÃO DE DÉBITO */}
+                      <div
+                        className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                          totemState.paymentMethod === "card_debit"
+                            ? "border-green-500 bg-green-50"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                        onClick={() => handlePaymentSelect("card_debit")}
+                      >
+                        <div
+                          className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center ${
+                            totemState.paymentMethod === "card_debit"
+                              ? "border-green-500 bg-green-500"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          {totemState.paymentMethod === "card_debit" && (
+                            <Check className="h-4 w-4 text-white" />
+                          )}
+                        </div>
+                        <CreditCard className="h-8 w-8 mr-4 text-green-500" />
+                        <span className="text-xl font-semibold">
+                          Cartão de Débito
+                        </span>
+                      </div>
+
+                      {/* ✅ PIX */}
+                      <div
+                        className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                          totemState.paymentMethod === "pix"
+                            ? "border-green-500 bg-green-50"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                        onClick={() => handlePaymentSelect("pix")}
+                      >
+                        <div
+                          className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center ${
+                            totemState.paymentMethod === "pix"
+                              ? "border-green-500 bg-green-500"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          {totemState.paymentMethod === "pix" && (
+                            <Check className="h-4 w-4 text-white" />
+                          )}
+                        </div>
+                        <Smartphone className="h-8 w-8 mr-4" />
+                        <span className="text-xl font-semibold">PIX</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="flex gap-4">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => totemState.setInputStep("name")}
+                  >
+                    Voltar
+                  </Button>
+                  <Button
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                    onClick={processPayment}
+                    disabled={!totemState.paymentMethod || isLoading}
+                  >
+                    {isLoading
+                      ? "Processando..."
+                      : `Confirmar Pagamento - R$ ${totemState
+                          .calculateCartTotal()
+                          .toFixed(2)}`}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* ✅ ÁREA INFERIOR - TECLADOS (50% DA ALTURA DA TELA - RESPONSIVO) */}
+      {shouldShowKeyboard && (
+        <div
+          className="bg-gray-100 border-t-2 border-gray-300 flex items-center justify-center p-6"
+          style={{
+            height: `${keyboardHeight}px`,
+            minHeight: `${keyboardHeight}px`,
+            maxHeight: `${keyboardHeight}px`,
+          }}
+        >
+          <div className="w-full max-w-4xl h-full">
+            {/* Teclado CPF */}
+            {totemState.inputStep === "cpf" && (
+              <div className="bg-white rounded-lg p-6 shadow-lg h-full flex flex-col">
+                <h3 className="text-2xl font-semibold mb-6 text-center text-gray-800">
+                  📱 Digite seu CPF no teclado abaixo
+                </h3>
+                <div className="flex-1">
+                  <NumericKeyboard
+                    onKeyPress={handleCpfKeyPress}
+                    onBackspace={handleCpfBackspace}
+                    onClear={handleCpfClear}
+                    onConfirm={handleCpfConfirm}
+                    disabled={isLoading}
+                    confirmDisabled={
+                      !CPFUtils.isComplete(totemState.customerData.cpf) ||
+                      !CPFUtils.validate(totemState.customerData.cpf)
+                    }
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Teclado Nome */}
+            {totemState.inputStep === "name" && (
+              <div className="bg-white rounded-lg p-6 shadow-lg h-full flex flex-col">
+                <div className="flex-1">
+                  <VirtualKeyboard
+                    onKeyPress={handleNameKeyPress}
+                    onBackspace={handleNameBackspace}
+                    onSpace={handleNameSpace}
+                    onClear={handleNameClear}
+                    onConfirm={handleNameConfirm}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
